@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest'
-import { http } from './http'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
+import { useHttpClient } from './http'
 
 const fetchMock = vi.fn()
 
@@ -28,10 +28,32 @@ const requestOptions = {
   payload: { name: 'John' }
 } as const
 
-describe('http.fetchData', () => {
+const createClient = (baseURL = '') =>
+  useHttpClient({
+    baseURL,
+    defaultHeaderss: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
+    }
+  })
+
+type HttpInstance = ReturnType<typeof createClient>
+
+describe('useHttpClient.fetchData', () => {
+  let http: HttpInstance
+
   beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock)
     fetchMock.mockReset()
+  })
+
+  beforeEach(async () => {
+    http = createClient('')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
   })
 
   it('возвращает распарсенные данные при статусе 2xx', async () => {
@@ -42,7 +64,11 @@ describe('http.fetchData', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/users', {
       method: 'POST',
-      headers: { 'X-Custom': '1' },
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-Custom': '1'
+      },
       body: JSON.stringify(requestOptions.payload)
     })
     expect(result).toEqual(data)

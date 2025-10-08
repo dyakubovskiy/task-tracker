@@ -2,7 +2,6 @@ import type { HttpConfig, HttpClient, HttpResponse, HttpError, RequestOptions } 
 
 import { safeDestr } from 'destr'
 import { ERROR_TYPE } from './types'
-import { HTTP_CONFIG } from './config'
 
 const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => {
   const fetchData: HttpClient['fetchData'] = async <T>(url: string, options: RequestOptions) => {
@@ -55,6 +54,4 @@ const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => 
   return { fetchData }
 }
 
-const http = useHttpClient(HTTP_CONFIG)
-
-export { http }
+export { useHttpClient }

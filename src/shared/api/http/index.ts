@@ -1,3 +1,3 @@
-import { http } from './http'
+import { http } from './client'
 
 export { http }
