@@ -6,6 +6,5 @@
   "printWidth": 100,
   "trailingComma": "none",
   "bracketSameLine": true,
-  "singleAttributePerLine": true,
-  "vueIndentScriptAndStyle": true
+  "singleAttributePerLine": true
 }
