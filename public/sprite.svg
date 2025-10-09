@@ -1,0 +1,7 @@
+<svg width="0" height="0" class="hidden"
+  xmlns="http://www.w3.org/2000/svg">
+  <symbol id="x" viewBox="0 0 24 24" fill="currentColor">
+    <path
+      d="M18.3 5.7a1 1 0 0 0-1.4 0L12 10.59 7.1 5.7a1 1 0 0 0-1.4 1.4L10.59 12l-4.9 4.9a1 1 0 1 0 1.4 1.4L12 13.41l4.9 4.9a1 1 0 0 0 1.4-1.41L13.41 12l4.9-4.9a1 1 0 0 0-1.41-1.4Z" />
+  </symbol>
+</svg>
