@@ -1,0 +1,78 @@
+:root {
+  color-scheme: light;
+  --font-family-base: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  --color-bg: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-surface-variant: #eef1f8;
+  --color-border: #d6dae5;
+  --color-border-strong: #b4bdd2;
+  --color-text-primary: #101828;
+  --color-text-secondary: #475467;
+  --color-text-muted: #667085;
+  --color-accent: #4a7bff;
+  --color-accent-strong: #2f5ee3;
+
+  --color-toast-info-bg: #e8f0ff;
+  --color-toast-info-border: #2f5ee3;
+  --color-toast-info-text: #1d3f9d;
+  --color-toast-success-bg: #e6f6ec;
+  --color-toast-success-border: #2f9662;
+  --color-toast-success-text: #1a6f45;
+  --color-toast-danger-bg: #fdecef;
+  --color-toast-danger-border: #dc3f45;
+  --color-toast-danger-text: #b32025;
+
+  --color-backdrop: rgba(15, 23, 42, 0.35);
+  --color-shadow: rgba(15, 23, 42, 0.1);
+
+  --radius-sm: 0.6rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.6rem;
+
+  --spacing-2: 0.2rem;
+  --spacing-4: 0.4rem;
+  --spacing-8: 0.8rem;
+  --spacing-12: 1.2rem;
+  --spacing-16: 1.6rem;
+  --spacing-20: 2rem;
+  --spacing-24: 2.4rem;
+  --spacing-32: 3.2rem;
+
+  --shadow-sm: 0 0.4rem 1.2rem rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 1.2rem 2.4rem rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 2rem 4.4rem rgba(15, 23, 42, 0.12);
+
+  --transition-base: 150ms ease;
+  --transition-emphasized: 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #0d1424;
+  --color-surface: #151f32;
+  --color-surface-variant: #1f2a40;
+  --color-border: #293652;
+  --color-border-strong: #3b4a6f;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #c7d3ed;
+  --color-text-muted: #94a3c7;
+  --color-accent: #7aa2ff;
+  --color-accent-strong: #9bb8ff;
+
+  --color-toast-info-bg: #1c2b4a;
+  --color-toast-info-border: #799cff;
+  --color-toast-info-text: #c7d7ff;
+  --color-toast-success-bg: #163428;
+  --color-toast-success-border: #4ac68f;
+  --color-toast-success-text: #9ef1c7;
+  --color-toast-danger-bg: #2f1721;
+  --color-toast-danger-border: #ff8088;
+  --color-toast-danger-text: #ffc4c9;
+
+  --color-backdrop: rgba(8, 12, 24, 0.6);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+}
