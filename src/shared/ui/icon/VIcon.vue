@@ -5,11 +5,11 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
+export interface IconProps {
   iconId: string
 }
 
-defineProps<Props>()
+defineProps<IconProps>()
 </script>
 
 <style scoped>
