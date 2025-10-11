@@ -4,9 +4,9 @@ export interface HttpConfig {
 }
 
 export interface RequestOptions {
-  payload: object
-  method: RequestInit['method']
-  headers: RequestInit['headers']
+  payload?: object
+  query?: Record<string, string | number | boolean>
+  headers?: RequestInit['headers']
 }
 
 export interface HttpResponse<T> {
@@ -27,6 +27,8 @@ export interface HttpError<T = unknown> {
   message: string
 }
 
+export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
+
 export interface HttpClient {
-  fetchData: <T>(url: string, options: RequestOptions) => Promise<T | null>
+  fetchData: <T>(method: HttpMethod, url: string, options?: RequestOptions) => Promise<T | null>
 }
