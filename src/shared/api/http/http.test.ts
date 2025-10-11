@@ -75,6 +75,17 @@ describe('useHttpClient.fetchData', () => {
     expect(result).toEqual(data)
   })
 
+  it('применяет адаптер к результату', async () => {
+    const dto = { value: '42' }
+    fetchMock.mockResolvedValueOnce(mockResponse(200, dto))
+
+    const result = await http.fetchData<typeof dto, number>('get', '/value', {
+      adapter: (payload) => Number(payload.value)
+    })
+
+    expect(result).toBe(42)
+  })
+
   it('корректно собирает URL с query-параметрами', async () => {
     http = createClient('https://api.test')
 
@@ -130,6 +141,14 @@ describe('useHttpClient.fetchData', () => {
     expect(result).toEqual(payload)
   })
 
+  it('возвращает null при статусе 2xx и пустом теле', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(200, null))
+
+    const result = await http.fetchData('get', '/empty')
+
+    expect(result).toBeNull()
+  })
+
   it('возвращает null при неуспешном статусе 4xx', async () => {
     const errorBody = { message: 'Not found' }
     fetchMock.mockResolvedValueOnce(mockResponse(404, errorBody))
@@ -171,5 +190,88 @@ describe('useHttpClient.fetchData', () => {
     const result = await http.fetchData('post', '/users', requestOptions)
 
     expect(result).toBeNull()
+  })
+})
+
+describe('useHttpClient.fetchList', () => {
+  let http: HttpInstance
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock)
+    fetchMock.mockReset()
+    http = createClient('https://api.test')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('возвращает массив DTO при успешном ответе', async () => {
+    const data = [
+      { id: 1 },
+      { id: 2 }
+    ]
+    fetchMock.mockResolvedValueOnce(mockResponse(200, data))
+
+    const result = await http.fetchList<typeof data[number]>('get', '/items')
+
+    expect(result).toEqual(data)
+  })
+
+  it('применяет адаптер ко всем элементам', async () => {
+    const dto = [
+      { id: '1' },
+      { id: '2' }
+    ]
+    fetchMock.mockResolvedValueOnce(mockResponse(200, dto))
+
+    const result = await http.fetchList<typeof dto[number], number>('get', '/items', {
+      adapter: (item) => Number(item.id)
+    })
+
+    expect(result).toEqual([1, 2])
+  })
+
+  it('возвращает пустой массив при ответе не-списком', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(200, { id: 1 }))
+
+    const result = await http.fetchList('get', '/items')
+
+    expect(result).toEqual([])
+  })
+
+  it('возвращает пустой массив при пустом теле', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(200, null))
+
+    const result = await http.fetchList('get', '/items')
+
+    expect(result).toEqual([])
+  })
+
+  it('возвращает пустой массив при ошибке HTTP', async () => {
+    const errorBody = { message: 'Not found' }
+    fetchMock.mockResolvedValueOnce(mockResponse(404, errorBody))
+
+    const result = await http.fetchList('get', '/items')
+
+    expect(result).toEqual([])
+  })
+
+  it('добавляет query-параметры в запрос списка', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(200, []))
+
+    await http.fetchList('get', '/items', {
+      query: { page: 1, search: 'test' }
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.test/items?page=1&search=test', {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: undefined
+    })
   })
 })

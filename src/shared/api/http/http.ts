@@ -11,20 +11,34 @@ import { safeDestr } from 'destr'
 import { ERROR_TYPE } from './types'
 
 const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => {
-  const fetchData: HttpClient['fetchData'] = async <T>(
+  const fetchData = async <DTO, Data = DTO>(
     method: HttpMethod,
     url: string,
-    options: RequestOptions = {}
-  ) => {
-    const { data } = await request<T>(method, url, options)
+    options?: RequestOptions<DTO, Data>
+  ): Promise<Data | null> => {
+    const { data } = await request<DTO>(method, url, options || {})
 
-    return data
+    if (data === null) return null
+
+    return options?.adapter ? options.adapter(data) : (data as Data)
+  }
+
+  const fetchList = async <DTO, Data = DTO>(
+    method: HttpMethod,
+    url: string,
+    options?: RequestOptions<DTO, Data>
+  ): Promise<Array<Data>> => {
+    const { data } = await request<Array<DTO>>(method, url, options || {})
+
+    if (data === null || !Array.isArray(data)) return []
+
+    return options?.adapter ? data.map(options.adapter) : (data as unknown as Array<Data>)
   }
 
   const request = async <T>(
     method: HttpMethod,
     url: string,
-    { headers, payload, query }: RequestOptions
+    { headers, payload, query }: Omit<RequestOptions, 'adapter'>
   ): Promise<HttpResponse<T>> => {
     try {
       const fullUrl = buildUrl(baseURL + url, query)
@@ -57,9 +71,7 @@ const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => 
 
     const params = new URLSearchParams()
 
-    Object.entries(query).forEach(([key, value]) => {
-      params.append(key, String(value))
-    })
+    Object.entries(query).forEach(([key, value]) => params.append(key, String(value)))
 
     const queryString = params.toString()
     return queryString ? `${baseUrl}?${queryString}` : baseUrl
@@ -81,7 +93,7 @@ const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => 
   const isHttpError = <T>(err: unknown): err is HttpError<T> =>
     typeof err === 'object' && err !== null && 'type' in err && err.type === ERROR_TYPE.HTTP_ERROR
 
-  return { fetchData }
+  return { fetchData, fetchList }
 }
 
 export { useHttpClient }

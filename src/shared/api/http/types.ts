@@ -3,10 +3,11 @@ export interface HttpConfig {
   defaultHeaderss: RequestInit['headers']
 }
 
-export interface RequestOptions {
+export interface RequestOptions<DTO = unknown, Data = unknown> {
   payload?: object
   query?: Record<string, string | number | boolean>
   headers?: RequestInit['headers']
+  adapter?: (dto: DTO) => Data
 }
 
 export interface HttpResponse<T> {
@@ -30,5 +31,27 @@ export interface HttpError<T = unknown> {
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
 
 export interface HttpClient {
-  fetchData: <T>(method: HttpMethod, url: string, options?: RequestOptions) => Promise<T | null>
+  fetchData<DTO>(
+    method: HttpMethod,
+    url: string,
+    options?: Omit<RequestOptions<DTO>, 'adapter'>
+  ): Promise<DTO | null>
+
+  fetchData<DTO, Data>(
+    method: HttpMethod,
+    url: string,
+    options: RequestOptions<DTO, Data> & { adapter: (dto: DTO) => Data }
+  ): Promise<Data | null>
+
+  fetchList<DTO>(
+    method: HttpMethod,
+    url: string,
+    options?: Omit<RequestOptions<DTO>, 'adapter'>
+  ): Promise<Array<DTO>>
+
+  fetchList<DTO, Data>(
+    method: HttpMethod,
+    url: string,
+    options: RequestOptions<DTO, Data> & { adapter: (dto: DTO) => Data }
+  ): Promise<Array<Data>>
 }
