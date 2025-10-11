@@ -19,7 +19,7 @@
 
 .content {
   width: 100%;
-  max-width: 42rem;
+  max-width: 52rem;
   display: flex;
   flex-direction: column;
   align-items: stretch;
