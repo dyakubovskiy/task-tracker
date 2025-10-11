@@ -25,7 +25,7 @@
 import type { IconProps } from '../icon'
 import type { Toast } from './useToast'
 
-import { VButtonIcon } from '../button/'
+import { VButtonIcon } from '../button'
 import { VIcon } from '../icon'
 
 defineProps<Toast>()
