@@ -27,13 +27,15 @@ const requestOptions = {
   payload: { name: 'John' }
 } as const
 
+const defaultHeaders = {
+  Accept: 'application/json',
+  'Content-Type': 'application/json'
+} as const
+
 const createClient = (baseURL = '') =>
   useHttpClient({
     baseURL,
-    defaultHeaderss: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    }
+    defaultHeaders
   })
 
 type HttpInstance = ReturnType<typeof createClient>
@@ -66,8 +68,7 @@ describe('useHttpClient.fetchData', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://api.test/users', {
       method: 'POST',
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+        ...defaultHeaders,
         'X-Custom': '1'
       },
       body: JSON.stringify(requestOptions.payload)
@@ -86,6 +87,28 @@ describe('useHttpClient.fetchData', () => {
     expect(result).toBe(42)
   })
 
+  it('переопределяет заголовки пользовательскими значениями', async () => {
+    http = createClient('https://api.test')
+
+    const payload = { ok: true }
+    fetchMock.mockResolvedValueOnce(mockResponse(200, payload))
+
+    await http.fetchData('get', '/override', {
+      headers: {
+        Accept: 'text/plain'
+      }
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.test/override', {
+      method: 'GET',
+      headers: {
+        ...defaultHeaders,
+        Accept: 'text/plain'
+      },
+      body: undefined
+    })
+  })
+
   it('корректно собирает URL с query-параметрами', async () => {
     http = createClient('https://api.test')
 
@@ -95,14 +118,14 @@ describe('useHttpClient.fetchData', () => {
       query: { search: 'john', page: 1, active: true }
     })
 
-    expect(fetchMock).toHaveBeenCalledWith('https://api.test/users?search=john&page=1&active=true', {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: undefined
-    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.test/users?search=john&page=1&active=true',
+      {
+        method: 'GET',
+        headers: defaultHeaders,
+        body: undefined
+      }
+    )
   })
 
   it('возвращает базовый URL при пустом наборе query-параметров', async () => {
@@ -114,10 +137,7 @@ describe('useHttpClient.fetchData', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.test/users', {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
+      headers: defaultHeaders,
       body: undefined
     })
   })
@@ -132,10 +152,7 @@ describe('useHttpClient.fetchData', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.test/ping', {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
+      headers: defaultHeaders,
       body: undefined
     })
     expect(result).toEqual(payload)
@@ -193,6 +210,54 @@ describe('useHttpClient.fetchData', () => {
   })
 })
 
+describe('useHttpClient auth token', () => {
+  let http: HttpInstance
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock)
+    fetchMock.mockReset()
+    http = createClient('https://api.test')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('добавляет и сбрасывает OAuth токен в заголовках', async () => {
+    fetchMock.mockResolvedValue(mockResponse(200, { ok: true }))
+
+    http.setToken('token-123')
+
+    await http.fetchData('get', '/profile')
+
+    const firstCall = fetchMock.mock.calls[0]
+    expect(firstCall).toBeDefined()
+
+    if (!firstCall) throw new Error('First call not found')
+
+    expect(firstCall[0]).toBe('https://api.test/profile')
+    expect(firstCall[1]).toMatchObject({
+      headers: {
+        ...defaultHeaders,
+        Authorization: 'OAuth token-123'
+      }
+    })
+
+    http.resetToken()
+
+    await http.fetchData('get', '/profile')
+
+    const secondCall = fetchMock.mock.calls[1]
+
+    if (!secondCall) throw new Error('Second call not found')
+
+    expect(secondCall[1]).toMatchObject({
+      headers: defaultHeaders
+    })
+  })
+})
+
 describe('useHttpClient.fetchList', () => {
   let http: HttpInstance
 
@@ -208,25 +273,19 @@ describe('useHttpClient.fetchList', () => {
   })
 
   it('возвращает массив DTO при успешном ответе', async () => {
-    const data = [
-      { id: 1 },
-      { id: 2 }
-    ]
+    const data = [{ id: 1 }, { id: 2 }]
     fetchMock.mockResolvedValueOnce(mockResponse(200, data))
 
-    const result = await http.fetchList<typeof data[number]>('get', '/items')
+    const result = await http.fetchList<(typeof data)[number]>('get', '/items')
 
     expect(result).toEqual(data)
   })
 
   it('применяет адаптер ко всем элементам', async () => {
-    const dto = [
-      { id: '1' },
-      { id: '2' }
-    ]
+    const dto = [{ id: '1' }, { id: '2' }]
     fetchMock.mockResolvedValueOnce(mockResponse(200, dto))
 
-    const result = await http.fetchList<typeof dto[number], number>('get', '/items', {
+    const result = await http.fetchList<(typeof dto)[number], number>('get', '/items', {
       adapter: (item) => Number(item.id)
     })
 
@@ -267,10 +326,7 @@ describe('useHttpClient.fetchList', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.test/items?page=1&search=test', {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
-      },
+      headers: defaultHeaders,
       body: undefined
     })
   })

@@ -1,6 +1,6 @@
 export interface HttpConfig {
   baseURL: string
-  defaultHeaderss: RequestInit['headers']
+  defaultHeaders: RequestInit['headers']
 }
 
 export interface RequestOptions<DTO = unknown, Data = unknown> {
@@ -54,4 +54,7 @@ export interface HttpClient {
     url: string,
     options: RequestOptions<DTO, Data> & { adapter: (dto: DTO) => Data }
   ): Promise<Array<Data>>
+
+  setToken: (token: string) => void
+  resetToken: () => void
 }

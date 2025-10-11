@@ -10,7 +10,17 @@ import type {
 import { safeDestr } from 'destr'
 import { ERROR_TYPE } from './types'
 
-const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => {
+const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
+  let authToken: string | null = null
+
+  const setToken = (token: string): void => {
+    authToken = token
+  }
+
+  const resetToken = (): void => {
+    authToken = null
+  }
+
   const fetchData = async <DTO, Data = DTO>(
     method: HttpMethod,
     url: string,
@@ -45,7 +55,7 @@ const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => 
 
       const response = await fetch(fullUrl, {
         method: method.toUpperCase(),
-        headers: { ...defaultHeaderss, ...headers },
+        headers: buildHeaders(headers),
         body: payload ? JSON.stringify(payload) : undefined
       })
 
@@ -77,6 +87,16 @@ const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => 
     return queryString ? `${baseUrl}?${queryString}` : baseUrl
   }
 
+  const buildHeaders = (customHeaders?: RequestInit['headers']): HeadersInit => {
+    const authHeader = authToken ? { Authorization: `OAuth ${authToken}` } : {}
+
+    return {
+      ...defaultHeaders,
+      ...authHeader,
+      ...customHeaders
+    } as HeadersInit
+  }
+
   const isStatusSuccess = (status: number): boolean => status >= 200 && status < 300
 
   const createHttpError = <T>(
@@ -93,7 +113,7 @@ const useHttpClient = ({ baseURL, defaultHeaderss }: HttpConfig): HttpClient => 
   const isHttpError = <T>(err: unknown): err is HttpError<T> =>
     typeof err === 'object' && err !== null && 'type' in err && err.type === ERROR_TYPE.HTTP_ERROR
 
-  return { fetchData, fetchList }
+  return { fetchData, fetchList, setToken, resetToken }
 }
 
 export { useHttpClient }
