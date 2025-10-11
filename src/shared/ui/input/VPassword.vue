@@ -9,7 +9,6 @@
     <template #suffix>
       <VButton
         variant="ghost"
-        class="toggle"
         :aria-pressed="visible"
         :disabled="disabled"
         @click="toggleVisibility">
@@ -43,9 +42,3 @@ const toggleVisibility = (): void => {
   visible.value = !visible.value
 }
 </script>
-
-<style scoped>
-.toggle {
-  height: 100%;
-}
-</style>
