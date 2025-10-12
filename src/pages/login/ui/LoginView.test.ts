@@ -16,7 +16,8 @@ vi.mock('@/shared/ui/input', () => ({
     name: 'VPassword',
     props: ['modelValue'],
     emits: ['update:modelValue'],
-    template: '<input class="password" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
+    template:
+      '<input class="password" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />'
   }
 }))
 
