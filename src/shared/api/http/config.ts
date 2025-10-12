@@ -5,8 +5,7 @@ const HTTP_CONFIG: HttpConfig = {
   defaultHeaders: {
     Accept: 'application/json',
     'Content-Type': 'application/json',
-    Referer: import.meta.env.VITE_HEADER_REFERER,
-    Authorization: `OAuth ${import.meta.env.VITE_TOKEN}`
+    Referer: import.meta.env.VITE_HEADER_REFERER
   }
 } as const satisfies HttpConfig
 
