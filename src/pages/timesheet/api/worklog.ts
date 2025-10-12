@@ -1,3 +1,5 @@
+import type { Worklog } from '../model'
+
 import { http } from '@/shared/api'
 
 interface WorklogParams {
@@ -34,17 +36,6 @@ interface WorklogDTO {
   updatedAt: string
   start: string
   duration: string
-}
-
-interface Worklog {
-  id: number
-  start: string
-  duration: string
-  issue: {
-    id: string
-    key: string
-    display: string
-  }
 }
 
 export const getWorklogs = async ({
