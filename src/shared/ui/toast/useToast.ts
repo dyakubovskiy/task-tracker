@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 
-import { shallowRef } from 'vue'
+import { shallowRef, computed } from 'vue'
 import { createSharedComposable, useTimeoutFn } from '@vueuse/core'
 import { useUniqueId } from '../../lib/uuid'
 
@@ -44,5 +44,10 @@ export const useToast = createSharedComposable((): UseToast => {
     toasts.value = toasts.value.filter((toast) => toast.id !== id)
   }
 
-  return { toasts, variants: TOAST_VARIANTS, addToast, removeToast }
+  return {
+    toasts: computed(() => toasts.value),
+    variants: TOAST_VARIANTS,
+    addToast,
+    removeToast
+  }
 })

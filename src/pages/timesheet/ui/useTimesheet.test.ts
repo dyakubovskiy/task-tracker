@@ -38,6 +38,7 @@ describe('useTimesheetCalendar', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   it('предоставляет текущий месяц и обновляет его при смене', () => {
@@ -52,9 +53,11 @@ describe('useTimesheetCalendar', () => {
   })
 
   it('формирует заголовок месяца на русском', () => {
-    const { activeMonth, monthTitle } = useTimesheetCalendar()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-05-15T00:00:00.000Z'))
 
-    activeMonth.value = new Date('2024-05-15T00:00:00.000Z')
+    const { monthTitle } = useTimesheetCalendar()
+
     expect(monthTitle.value).toBe('Май 2024')
   })
 

@@ -46,11 +46,11 @@ const DAYS_PER_WEEK = 7
 const CALENDAR_CELLS = CALENDAR_WEEKS * DAYS_PER_WEEK
 
 export const useTimesheetCalendar = (): TimesheetCalendar => {
-  const activeMonth = ref(new Date())
-  const weeks = ref<Array<Array<CalendarDay>>>([])
-  const daySummaries = ref(new Map<string, DayWorklogSummary>())
+  const activeMonth: TimesheetCalendar['activeMonth'] = ref(new Date())
+  const weeks: TimesheetCalendar['weeks'] = ref([])
+  const daySummaries: TimesheetCalendar['daySummaries'] = ref(new Map<string, DayWorklogSummary>())
 
-  const monthTitle = computed(() => {
+  const monthTitle: TimesheetCalendar['monthTitle'] = computed(() => {
     const text = activeMonth.value
       .toLocaleString('ru-RU', { month: 'long', year: 'numeric' })
       .replace(' г.', '')
@@ -58,14 +58,14 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
     return text.charAt(0).toUpperCase() + text.slice(1)
   })
 
-  const changeMonth = (offset: number) => {
+  const changeMonth: TimesheetCalendar['changeMonth'] = (offset) => {
     const next = new Date(activeMonth.value)
     next.setMonth(next.getMonth() + offset)
     next.setDate(1)
     activeMonth.value = next
   }
 
-  const getMonthlyTimesheet = (date: Date, worklogs: Array<Worklog>) => {
+  const getMonthlyTimesheet: TimesheetCalendar['getMonthlyTimesheet'] = (date, worklogs) => {
     const summaries = groupWorklogsByDate(worklogs)
 
     daySummaries.value = summaries
@@ -101,7 +101,7 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
     return summaries
   }
 
-  const getMonthBoundaries = (targetDate: Date) => {
+  const getMonthBoundaries = (targetDate: Date): { firstDay: Date; lastDay: Date } => {
     const year = targetDate.getFullYear()
     const month = targetDate.getMonth()
 
@@ -155,13 +155,14 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
       days.slice(weekIndex * DAYS_PER_WEEK, (weekIndex + 1) * DAYS_PER_WEEK)
     )
 
-  const getDaySummary = (dateKey: string) => daySummaries.value.get(dateKey)
+  const getDaySummary: TimesheetCalendar['getDaySummary'] = (dateKey) =>
+    daySummaries.value.get(dateKey)
 
   return {
-    activeMonth,
-    weeks,
+    activeMonth: computed(() => activeMonth.value),
+    weeks: computed(() => weeks.value),
     monthTitle,
-    daySummaries,
+    daySummaries: computed(() => daySummaries.value),
     changeMonth,
     getMonthlyTimesheet,
     getDaySummary

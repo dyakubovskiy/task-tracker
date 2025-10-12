@@ -9,6 +9,13 @@ import LoginView from './LoginView.vue'
 import { http } from '@/shared/api'
 import { useToast } from '@/shared/ui/toast'
 
+const toastStore = useToast()
+
+const resetToasts = () => {
+  const items = [...toastStore.toasts.value]
+  items.forEach(({ id }) => toastStore.removeToast(id))
+}
+
 const getSubmitButton = (wrapper: VueWrapper) => {
   const buttons = wrapper.findAll('button')
   if (!buttons.length) throw new Error('Submit button not found')
@@ -61,12 +68,12 @@ const mountLoginView = async () => {
 describe('LoginView integration', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    const toast = useToast()
-    toast.toasts.value = []
+    resetToasts()
   })
 
   afterEach(() => {
     http.resetToken()
+    resetToasts()
   })
 
   it('отображает скелетон во время авторизации и перенаправляет при успехе', async () => {
@@ -107,8 +114,7 @@ describe('LoginView integration', () => {
     const fetchDataSpy = vi.spyOn(http, 'fetchData').mockResolvedValue(null)
     const resetTokenSpy = vi.spyOn(http, 'resetToken')
 
-    const toast = useToast()
-    const addToastSpy = vi.spyOn(toast, 'addToast')
+    const addToastSpy = vi.spyOn(toastStore, 'addToast')
 
     const { wrapper } = await mountLoginView()
     await flushComponent(wrapper)
@@ -208,8 +214,7 @@ describe('LoginView integration', () => {
     const setTokenSpy = vi.spyOn(http, 'setToken')
     const resetTokenSpy = vi.spyOn(http, 'resetToken')
 
-    const toast = useToast()
-    const addToastSpy = vi.spyOn(toast, 'addToast')
+    const addToastSpy = vi.spyOn(toastStore, 'addToast')
 
     const { wrapper, router } = await mountLoginView()
     await flushComponent(wrapper)

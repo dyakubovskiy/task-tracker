@@ -8,8 +8,16 @@ import type { Toast } from '@/shared/ui/toast/useToast'
 
 const toastStore = useToast()
 
-const renderComponent = async (items: Array<Toast>) => {
-  toastStore.toasts.value = items
+type ToastInput = Omit<Toast, 'id'>
+
+const resetStore = () => {
+  const current = [...toastStore.toasts.value]
+  current.forEach(({ id }) => toastStore.removeToast(id))
+}
+
+const renderComponent = async (items: Array<ToastInput>) => {
+  resetStore()
+  const ids = items.map((toast) => toastStore.addToast(toast, 0))
 
   const TeleportStub = {
     inheritAttrs: false,
@@ -29,28 +37,26 @@ const renderComponent = async (items: Array<Toast>) => {
   await nextTick()
   await flushPromises()
 
-  return wrapper
+  return { wrapper, ids }
 }
 
 describe('ToastList', () => {
   beforeEach(() => {
-    toastStore.toasts.value = []
+    resetStore()
   })
 
   afterEach(() => {
-    toastStore.toasts.value = []
+    resetStore()
   })
 
   it('рендерит тосты из стора в исходном порядке', async () => {
-    const wrapper = await renderComponent([
+    const { wrapper } = await renderComponent([
       {
-        id: 'toast-1',
         title: 'Первый',
         desc: 'Описание',
         variant: toastStore.variants.INFO
       },
       {
-        id: 'toast-2',
         title: 'Второй',
         variant: toastStore.variants.SUCCESS
       }
@@ -66,15 +72,14 @@ describe('ToastList', () => {
   })
 
   it('удаляет тост при событии close', async () => {
-    const toast: Toast = {
-      id: 'close-me',
+    const toast: ToastInput = {
       title: 'Закрыть',
       variant: toastStore.variants.DANGER
     }
 
-    const wrapper = await renderComponent([toast])
+    const { wrapper, ids } = await renderComponent([toast])
 
-    wrapper.getComponent(VToast).vm.$emit('close', toast.id)
+    wrapper.getComponent(VToast).vm.$emit('close', ids[0])
     await nextTick()
 
     expect(toastStore.toasts.value).toEqual([])
@@ -84,7 +89,7 @@ describe('ToastList', () => {
   })
 
   it('использует TransitionGroup с анимацией падения', async () => {
-    const wrapper = await renderComponent([])
+    const { wrapper } = await renderComponent([])
 
     const group = wrapper.getComponent(TransitionGroup)
     expect(group.props('name')).toBe('toast-fall')
@@ -95,18 +100,14 @@ describe('ToastList', () => {
   })
 
   it('обновляет список при добавлении нового тоста', async () => {
-    const firstToast: Toast = {
-      id: 'toast-1',
+    const firstToast: ToastInput = {
       title: 'Первый',
       variant: toastStore.variants.INFO
     }
 
-    const wrapper = await renderComponent([firstToast])
+    const { wrapper } = await renderComponent([firstToast])
 
-    toastStore.toasts.value = [
-      firstToast,
-      { id: 'toast-2', title: 'Второй', variant: toastStore.variants.SUCCESS }
-    ]
+    toastStore.addToast({ title: 'Второй', variant: toastStore.variants.SUCCESS }, 0)
     await flushPromises()
 
     const items = wrapper.findAll('li.item')
