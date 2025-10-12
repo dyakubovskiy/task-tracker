@@ -1,14 +1,6 @@
-import type {
-  HttpConfig,
-  HttpClient,
-  HttpResponse,
-  HttpError,
-  RequestOptions,
-  HttpMethod
-} from './types'
+import type { HttpConfig, HttpClient, HttpResponse, RequestOptions, HttpMethod } from './types'
 
 import { safeDestr } from 'destr'
-import { ERROR_TYPE } from './types'
 
 const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
   let authToken: string | null = null
@@ -26,8 +18,9 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
     url: string,
     options?: RequestOptions<DTO, Data>
   ): Promise<Data | null> => {
-    const { data } = await request<DTO>(method, url, options || {})
+    const { data, status } = await request<DTO>(method, url, options || {})
 
+    if (!isStatusSuccess(status) && !options?.returnErrorData) return null
     if (data === null) return null
 
     return options?.adapter ? options.adapter(data) : (data as Data)
@@ -38,8 +31,9 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
     url: string,
     options?: RequestOptions<DTO, Data>
   ): Promise<Array<Data>> => {
-    const { data } = await request<Array<DTO>>(method, url, options || {})
+    const { data, status } = await request<Array<DTO>>(method, url, options || {})
 
+    if (!isStatusSuccess(status)) return []
     if (data === null || !Array.isArray(data)) return []
 
     return options?.adapter ? data.map(options.adapter) : (data as unknown as Array<Data>)
@@ -48,7 +42,7 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
   const request = async <T>(
     method: HttpMethod,
     url: string,
-    { headers, payload, query }: Omit<RequestOptions, 'adapter'>
+    { headers, payload, query }: Omit<RequestOptions, 'adapter' | 'returnErrorData'>
   ): Promise<HttpResponse<T>> => {
     try {
       const fullUrl = buildUrl(baseURL + url, query)
@@ -63,12 +57,8 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
       const text = await response.text()
       const data = safeDestr<T>(text, { strict: true })
 
-      if (!isStatusSuccess(status)) throw createHttpError(status, data)
-
       return { data, status }
-    } catch (err: unknown) {
-      if (isHttpError<T>(err)) return { data: err.data, status: err.status }
-
+    } catch {
       return { data: null, status: 500 }
     }
   }
@@ -98,20 +88,6 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
   }
 
   const isStatusSuccess = (status: number): boolean => status >= 200 && status < 300
-
-  const createHttpError = <T>(
-    status: number,
-    data: T | null,
-    message = 'HTTP Error'
-  ): HttpError<T> => ({
-    type: ERROR_TYPE.HTTP_ERROR,
-    status,
-    data,
-    message
-  })
-
-  const isHttpError = <T>(err: unknown): err is HttpError<T> =>
-    typeof err === 'object' && err !== null && 'type' in err && err.type === ERROR_TYPE.HTTP_ERROR
 
   return { fetchData, fetchList, setToken, resetToken }
 }

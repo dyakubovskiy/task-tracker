@@ -8,6 +8,7 @@ export interface RequestOptions<DTO = unknown, Data = unknown> {
   query?: Record<string, string | number | boolean>
   headers?: RequestInit['headers']
   adapter?: (dto: DTO) => Data
+  returnErrorData?: boolean
 }
 
 export interface HttpResponse<T> {

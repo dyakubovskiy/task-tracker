@@ -172,16 +172,28 @@ describe('useHttpClient.fetchData', () => {
 
     const result = await http.fetchData<typeof errorBody>('post', '/users/1', requestOptions)
 
-    expect(result).toEqual(errorBody)
+    expect(result).toBeNull()
   })
 
-  it('возвращает null и статус 500 при исключении с HttpError', async () => {
+  it('возвращает данные ошибки при неуспешном статусе, если запрошено', async () => {
+    const errorBody = { message: 'Not found' }
+    fetchMock.mockResolvedValueOnce(mockResponse(404, errorBody))
+
+    const result = await http.fetchData<typeof errorBody, string>('get', '/users', {
+      returnErrorData: true,
+      adapter: (dto) => dto.message
+    })
+
+    expect(result).toBe('Not found')
+  })
+
+  it('возвращает null при исключении с HttpError', async () => {
     const httpError = createHttpError(503, { message: 'Service unavailable' })
     fetchMock.mockRejectedValueOnce(httpError)
 
     const result = await http.fetchData<{ message: string }>('post', '/users', requestOptions)
 
-    expect(result).toEqual(httpError.data)
+    expect(result).toBeNull()
   })
 
   it('возвращает null при исключении с HttpError без данных', async () => {
