@@ -111,4 +111,20 @@ describe('LoginView', () => {
 
     expect(pushMock).toHaveBeenCalledWith('/main')
   })
+
+  it('не инициирует авторизацию, если токен пустой, и показывает скелетон', async () => {
+    loginMock.mockResolvedValue(true)
+
+    const wrapper = await mountView()
+
+    const { handleSubmit } = wrapper.vm as unknown as { handleSubmit: () => Promise<void> }
+
+    await handleSubmit()
+    await flushPromises()
+
+    expect(loginMock).not.toHaveBeenCalled()
+    expect(addToastMock).not.toHaveBeenCalled()
+    expect(pushMock).not.toHaveBeenCalled()
+    expect(wrapper.find('.password-placeholder').exists()).toBe(true)
+  })
 })
