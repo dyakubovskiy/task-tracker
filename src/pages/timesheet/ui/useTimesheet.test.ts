@@ -1,7 +1,7 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 
-import { useTimesheetCalendar } from './useTimesheet'
 import { getTodayKey, getMonthStartUTC, toDateKey, parseDurationToMinutes } from '../lib'
+import { useTimesheetCalendar } from './useTimesheet'
 
 vi.mock('../lib', () => ({
   toDateKey: vi.fn(),
@@ -27,12 +27,17 @@ const createWorklog = (overrides = {}) => {
 
 describe('useTimesheetCalendar', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     mockToDateKey.mockImplementation((value: string | Date) =>
       value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10)
     )
     mockParseDuration.mockImplementation(() => 60)
     mockGetTodayKey.mockReturnValue('2024-10-01')
     mockGetMonthStartUTC.mockImplementation((date: Date) => new Date(date))
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
   })
 
   it('предоставляет текущий месяц и обновляет его при смене', () => {
@@ -54,7 +59,7 @@ describe('useTimesheetCalendar', () => {
   })
 
   it('группирует ворклоги по датам и формирует 6 недель календаря', () => {
-    const { weeks, getMonthlyTimesheet } = useTimesheetCalendar()
+    const { weeks, daySummaries, getMonthlyTimesheet, getDaySummary } = useTimesheetCalendar()
 
     const worklogs = [
       createWorklog({ id: 1, start: '2024-10-01T09:00:00.000Z', duration: 'PT2H' }),
@@ -79,6 +84,8 @@ describe('useTimesheetCalendar', () => {
     const flattened = weeks.value.flat()
     const dayMap = Object.fromEntries(flattened.map((day) => [day.dateKey, day]))
 
+    expect(daySummaries.value.get('2024-10-01')?.items).toHaveLength(2)
+    expect(getDaySummary('2024-10-01')?.totalMinutes).toBe(210)
     expect(dayMap['2024-10-01']?.totalMinutes).toBe(210)
     expect(dayMap['2024-10-03']?.totalMinutes).toBe(30)
   })
@@ -94,11 +101,23 @@ describe('useTimesheetCalendar', () => {
   })
 
   it('возвращает 0 минут, если по дате нет записей', () => {
-    const { weeks, getMonthlyTimesheet } = useTimesheetCalendar()
+    const { weeks, daySummaries, getMonthlyTimesheet, getDaySummary } = useTimesheetCalendar()
 
     getMonthlyTimesheet(new Date('2024-10-01T00:00:00.000Z'), [])
 
     const flattened = weeks.value.flat()
     expect(flattened.every((day) => day.totalMinutes === 0)).toBe(true)
+    expect(daySummaries.value.size).toBe(0)
+    expect(getDaySummary('2024-10-05')).toBeUndefined()
+  })
+
+  it('создаёт пустое резюме для даты без записей', () => {
+    const { getMonthlyTimesheet, getDaySummary } = useTimesheetCalendar()
+
+    const worklogs = [createWorklog({ start: '2024-10-05T10:00:00.000Z' })]
+    getMonthlyTimesheet(new Date('2024-10-01T00:00:00.000Z'), worklogs)
+
+    expect(getDaySummary('2024-10-05')?.totalMinutes).toBe(60)
+    expect(getDaySummary('2024-10-10')).toBeUndefined()
   })
 })

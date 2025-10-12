@@ -4,7 +4,7 @@ import type { Worklog } from '../model'
 import { ref, computed } from 'vue'
 import { toDateKey, parseDurationToMinutes, getTodayKey, getMonthStartUTC } from '../lib'
 
-interface CalendarDay {
+export interface CalendarDay {
   dateKey: string
   label: number
   isCurrentMonth: boolean
@@ -12,7 +12,7 @@ interface CalendarDay {
   totalMinutes: number
 }
 
-interface DayWorklogSummary {
+export interface DayWorklogSummary {
   dateKey: string
   totalMinutes: number
   items: Array<NormalizedWorklog>
@@ -35,8 +35,10 @@ interface TimesheetCalendar {
   activeMonth: Ref<Date>
   weeks: Ref<Array<Array<CalendarDay>>>
   monthTitle: Ref<string>
+  daySummaries: Ref<Map<string, DayWorklogSummary>>
   changeMonth: (offset: number) => void
   getMonthlyTimesheet: (date: Date, worklogs: Array<Worklog>) => void
+  getDaySummary: (dateKey: string) => DayWorklogSummary | undefined
 }
 
 const CALENDAR_WEEKS = 6
@@ -46,6 +48,7 @@ const CALENDAR_CELLS = CALENDAR_WEEKS * DAYS_PER_WEEK
 export const useTimesheetCalendar = (): TimesheetCalendar => {
   const activeMonth = ref(new Date())
   const weeks = ref<Array<Array<CalendarDay>>>([])
+  const daySummaries = ref(new Map<string, DayWorklogSummary>())
 
   const monthTitle = computed(() => {
     const text = activeMonth.value
@@ -63,9 +66,10 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
   }
 
   const getMonthlyTimesheet = (date: Date, worklogs: Array<Worklog>) => {
-    weeks.value = chunkByWeek(
-      buildCalendarDays(getMonthStartUTC(date), groupWorklogsByDate(worklogs))
-    )
+    const summaries = groupWorklogsByDate(worklogs)
+
+    daySummaries.value = summaries
+    weeks.value = chunkByWeek(buildCalendarDays(getMonthStartUTC(date), summaries))
   }
 
   const normalizeWorklog = (entry: Worklog): NormalizedWorklog => ({
@@ -151,11 +155,15 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
       days.slice(weekIndex * DAYS_PER_WEEK, (weekIndex + 1) * DAYS_PER_WEEK)
     )
 
+  const getDaySummary = (dateKey: string) => daySummaries.value.get(dateKey)
+
   return {
     activeMonth,
     weeks,
     monthTitle,
+    daySummaries,
     changeMonth,
-    getMonthlyTimesheet
+    getMonthlyTimesheet,
+    getDaySummary
   }
 }
