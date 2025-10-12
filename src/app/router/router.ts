@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { LOGIN_ROUTE, LOGIN_LINK } from '@/pages/login'
+import { LOGIN_ROUTE } from '@/pages/login'
+import { TIME_SHEET_ROUTE, TIME_SHEET_LINK } from '@/pages/timesheet'
+import { MAIN_LINK } from '@/shared/config'
 import { CenteredLayout } from '../layout'
 
 const router = createRouter({
@@ -7,7 +9,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: LOGIN_LINK
+      name: MAIN_LINK.name,
+      redirect: TIME_SHEET_LINK
     },
     {
       path: LOGIN_ROUTE.path,
@@ -19,7 +22,8 @@ const router = createRouter({
           component: () => LOGIN_ROUTE.component()
         }
       ]
-    }
+    },
+    TIME_SHEET_ROUTE
   ]
 })
 
