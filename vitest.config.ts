@@ -13,6 +13,7 @@ export default mergeConfig(
       exclude: [...configDefaults.exclude, 'e2e/**'],
       root: fileURLToPath(new URL('./', import.meta.url)),
       coverage: {
+        include: ['src/**/*.ts', 'src/**/*.vue'],
         exclude: [
           'playwright.config.ts',
           'vite.config.ts',
@@ -23,7 +24,11 @@ export default mergeConfig(
           'coverage/**',
           'src/main.ts',
           'src/app/**',
-          'src/**/index.ts'
+          'src/**/index.ts',
+          'src/**/*.e2e.ts',
+          'src/**/*.config.ts',
+          'src/**/config/**/*.ts',
+          'src/**/types.ts'
         ]
       }
     }
