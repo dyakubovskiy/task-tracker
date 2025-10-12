@@ -1,8 +1,8 @@
 import type { Worklog } from '../model'
 import type { CalendarDay, DayWorklogSummary } from './useTimesheet'
 
-import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import TimeSheet from './TimeSheet.vue'
 
 const fetchWorklogsMock = vi.fn<(date: Date) => Promise<Worklog[]>>()
