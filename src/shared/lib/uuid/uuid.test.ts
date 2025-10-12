@@ -1,4 +1,3 @@
-// @vitest-environment node
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockUuid = vi.fn<() => string>()
