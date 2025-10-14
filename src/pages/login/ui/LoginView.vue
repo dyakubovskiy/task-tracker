@@ -81,23 +81,16 @@ const handleSubmit = async () => {
   const isAuth = await login(token.value)
   isSubmitting.value = false
 
-  if (!isAuth) {
-    handleAuthError()
-    return
-  }
+  addToast({
+    title: isAuth ? 'Авторизация успешна' : 'Неверный токен',
+    variant: isAuth ? 'success' : 'danger'
+  })
 
-  router.push(MAIN_LINK)
+  if (isAuth) router.push(MAIN_LINK)
+  else errorMessage.value = 'Неверный токен'
 }
 
 const isTokenValid = (token: string | null): token is string => !!token && token.trim().length > 0
-
-const handleAuthError = (): void => {
-  errorMessage.value = 'Неверный токен'
-  addToast({
-    title: 'Неверный токен',
-    variant: 'danger'
-  })
-}
 </script>
 
 <style scoped>
