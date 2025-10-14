@@ -1,8 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { LOGIN_ROUTE } from '@/pages/login'
+import { LOGIN_ROUTE, LOGIN_LINK } from '@/pages/login'
 import { TIME_SHEET_ROUTE, TIME_SHEET_LINK } from '@/pages/timesheet'
+import { userModel } from '@/entities/user'
 import { MAIN_LINK } from '@/shared/config'
 import { CenteredLayout } from '../layout'
+
+const { isUserAuthorized } = userModel()
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,8 +26,19 @@ const router = createRouter({
         }
       ]
     },
-    TIME_SHEET_ROUTE
+    TIME_SHEET_ROUTE,
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: TIME_SHEET_LINK
+    }
   ]
+})
+
+router.beforeEach((to) => {
+  console.log(isUserAuthorized.value)
+  if (!isUserAuthorized.value && to.name !== LOGIN_LINK.name) {
+    return { path: '/login' }
+  }
 })
 
 export { router }

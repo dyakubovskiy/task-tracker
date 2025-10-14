@@ -3,7 +3,7 @@ import type { Worklog } from '../model'
 import { http } from '@/shared/api'
 
 interface WorklogParams {
-  userId: string
+  userId: number
   period: { from: string; to: string }
   elementCount?: number
 }

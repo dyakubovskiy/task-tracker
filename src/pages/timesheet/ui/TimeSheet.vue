@@ -124,9 +124,10 @@ import type { Ref } from 'vue'
 import type { CalendarDay, DayWorklogSummary } from './useTimesheet'
 
 import { ref, computed, watch } from 'vue'
+import { userModel } from '@/entities/user'
 import { VButtonIcon } from '@/shared/ui/button'
-import { useWorklog } from '../model'
-import { formatMinutes } from '../lib'
+import { formatMinutes, getMonthPeriod } from '../lib'
+import { getWorklogs } from '../api'
 import { useTimesheetCalendar } from './useTimesheet'
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -137,7 +138,6 @@ const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
 const isLoading: Ref<boolean> = ref(false)
 const selectedDay: Ref<CalendarDay | null> = ref(null)
 
-const { fetchWorklogs } = useWorklog()
 const { activeMonth, weeks, monthTitle, changeMonth, getMonthlyTimesheet, getDaySummary } =
   useTimesheetCalendar()
 
@@ -167,17 +167,24 @@ const selectedDateTitle: Ref<string> = computed(() => {
 
 const isDetailsOpen: Ref<boolean> = computed(() => selectedDay.value !== null)
 
-const loadMonth = async (date: Date): Promise<void> => {
+const loadMonth = async (userId: number, date: Date): Promise<void> => {
   isLoading.value = true
   selectedDay.value = null
 
-  const worklogs = await fetchWorklogs(date)
+  const worklogs = await getWorklogs({ userId, period: getMonthPeriod(date) })
   getMonthlyTimesheet(date, worklogs)
 
   isLoading.value = false
 }
 
-watch(activeMonth, loadMonth, { immediate: true })
+const { getAuthUser } = userModel()
+const userId: Ref<number> = computed(() => getAuthUser().id)
+
+watch(
+  [userId, activeMonth],
+  ([newUserId, newActiveMonth]) => loadMonth(newUserId, newActiveMonth),
+  { immediate: true }
+)
 
 const openDay = (day: CalendarDay): void => {
   if (isLoading.value) return
