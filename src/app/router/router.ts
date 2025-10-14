@@ -35,7 +35,6 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  console.log(isUserAuthorized.value)
   if (!isUserAuthorized.value && to.name !== LOGIN_LINK.name) {
     return { path: '/login' }
   }
