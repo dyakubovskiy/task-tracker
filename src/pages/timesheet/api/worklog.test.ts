@@ -59,7 +59,7 @@ describe('getWorklogs', () => {
     })
 
     const result = await getWorklogs({
-      userId: 'user-1',
+      userId: 1,
       period,
       elementCount: 100
     })
@@ -85,7 +85,7 @@ describe('getWorklogs', () => {
     })
 
     await getWorklogs({
-      userId: 'user-2',
+      userId: 2,
       period: { from: '2024-02-01', to: '2024-02-29' }
     })
 
