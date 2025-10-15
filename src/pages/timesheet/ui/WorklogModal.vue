@@ -57,8 +57,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Основной контент -->
             <div
               v-else-if="hasEntries"
               class="detailsList">
@@ -124,10 +122,7 @@
 import { computed } from 'vue'
 import { VButtonIcon } from '@/shared/ui/button'
 import { formatMinutes } from '../lib'
-import type {
-  DayWorklogSummary,
-  GroupedWorklogIssue
-} from './useTimesheet'
+import type { DayWorklogSummary, GroupedWorklogIssue } from './useTimesheet'
 
 interface Props {
   visible: boolean
