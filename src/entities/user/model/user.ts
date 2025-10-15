@@ -13,6 +13,7 @@ interface User {
 }
 
 interface UserModel {
+  user: Ref<User | null>
   isUserAuthorized: Ref<boolean>
   getAuthUser: () => User
   setUser: (data: User) => void
@@ -37,6 +38,7 @@ const useUserModel = (): UserModel => {
   }
 
   return {
+    user: computed(() => user.value),
     isUserAuthorized,
     getAuthUser,
     setUser,

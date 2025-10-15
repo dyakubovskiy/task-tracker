@@ -4,14 +4,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { watch } from 'vue'
 import { userModel } from '@/entities/user'
 import { http } from '@/shared/api'
 import { ToastList } from './ui/toast'
 
-const { isUserAuthorized, getAuthUser, onAuthorize } = userModel()
-onAuthorize(({ token }) => http.setToken(token))
-onMounted(() => {
-  if (isUserAuthorized.value) http.setToken(getAuthUser().token)
-})
+const { user } = userModel()
+const { setToken, resetToken } = http
+
+watch(
+  user,
+  (userData) => {
+    if (userData) setToken(userData.token)
+    else resetToken()
+  },
+  { immediate: true }
+)
 </script>
