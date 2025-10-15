@@ -28,7 +28,8 @@ export default mergeConfig(
           'src/**/*.e2e.ts',
           'src/**/*.config.ts',
           'src/**/config/**/*.ts',
-          'src/**/types.ts'
+          'src/**/types.ts',
+          'src/shared/ui/input/type.ts'
         ]
       }
     }

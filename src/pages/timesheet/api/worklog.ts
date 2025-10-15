@@ -36,6 +36,7 @@ interface WorklogDTO {
   updatedAt: string
   start: string
   duration: string
+  comment?: string
 }
 
 export const getWorklogs = async ({
@@ -64,6 +65,7 @@ const worklogMapDTO = (dto: WorklogDTO): Worklog => ({
   issue: {
     id: dto.issue.id,
     key: dto.issue.key,
-    display: dto.issue.display
+    display: dto.issue.display,
+    comment: dto.comment ?? null
   }
 })

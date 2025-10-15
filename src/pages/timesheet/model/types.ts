@@ -6,5 +6,6 @@ export interface Worklog {
     id: string
     key: string
     display: string
+    comment: string | null
   }
 }

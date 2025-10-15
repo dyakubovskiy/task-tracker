@@ -29,6 +29,7 @@ interface WorklogIssue {
   id: string
   key: string
   display: string
+  comment: string | null
 }
 
 interface TimesheetCalendar {

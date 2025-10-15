@@ -6,7 +6,16 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { TIME_SHEET_ROUTE } from '../config'
 import { getWorklogs } from '../api'
+import { getMonthPeriod } from '../lib'
 import TimeSheet from './TimeSheet.vue'
+
+const getAuthUserMock = vi.fn<() => { id: number; name: string; token: string }>()
+
+vi.mock('@/entities/user', () => ({
+  userModel: () => ({
+    getAuthUser: getAuthUserMock
+  })
+}))
 
 vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api')>()
@@ -60,6 +69,7 @@ describe('TimeSheet integration', () => {
     vi.setSystemTime(new Date('2024-10-01T00:00:00.000Z'))
     document.body.innerHTML = ''
     mockedGetWorklogs.mockReset()
+    getAuthUserMock.mockReturnValue({ id: 1, name: 'Integrated User', token: 'token-int' })
   })
 
   afterEach(() => {
@@ -81,7 +91,7 @@ describe('TimeSheet integration', () => {
         id: 1,
         start: '2024-10-01T09:00:00.000Z',
         duration: 'PT1H30M',
-        issue: { id: '1', key: 'TASK-1', display: 'Task 1' }
+        issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: null }
       }
     ])
 
@@ -100,7 +110,7 @@ describe('TimeSheet integration', () => {
           id: 1,
           start: '2024-10-01T09:00:00.000Z',
           duration: 'PT1H',
-          issue: { id: '1', key: 'TASK-1', display: 'Task 1' }
+          issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: null }
         }
       ])
       .mockResolvedValueOnce([])
@@ -110,11 +120,8 @@ describe('TimeSheet integration', () => {
 
     expect(mockedGetWorklogs).toHaveBeenCalledTimes(1)
     expect(mockedGetWorklogs).toHaveBeenCalledWith({
-      userId: '8000000000000085',
-      period: {
-        from: '2024-09-30T21:00:00.000+0000',
-        to: '2024-10-31T20:59:59.999+0000'
-      }
+      userId: 1,
+      period: getMonthPeriod(new Date('2024-10-01T00:00:00.000Z'))
     })
 
     await wrapper.get('[aria-label="Следующий месяц"]').trigger('click')
@@ -122,11 +129,8 @@ describe('TimeSheet integration', () => {
 
     expect(mockedGetWorklogs).toHaveBeenCalledTimes(2)
     expect(mockedGetWorklogs).toHaveBeenLastCalledWith({
-      userId: '8000000000000085',
-      period: {
-        from: '2024-10-31T21:00:00.000+0000',
-        to: '2024-11-30T20:59:59.999+0000'
-      }
+      userId: 1,
+      period: getMonthPeriod(new Date('2024-11-01T00:00:00.000Z'))
     })
 
     wrapper.unmount()
@@ -138,13 +142,13 @@ describe('TimeSheet integration', () => {
         id: 1,
         start: '2024-10-01T09:00:00.000Z',
         duration: 'PT1H',
-        issue: { id: '1', key: 'TASK-1', display: 'Task 1' }
+        issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: null }
       },
       {
         id: 2,
         start: '2024-10-01T13:00:00.000Z',
         duration: 'PT45M',
-        issue: { id: '2', key: 'TASK-2', display: 'Task 2' }
+        issue: { id: '2', key: 'TASK-2', display: 'Task 2', comment: null }
       }
     ])
 

@@ -245,7 +245,15 @@ describe('LoginView integration', () => {
     expect(fetchDataSpy).toHaveBeenCalledTimes(2)
     expect(setTokenSpy).toHaveBeenCalledTimes(2)
     expect(resetTokenSpy).toHaveBeenCalledTimes(1)
-    expect(addToastSpy).toHaveBeenCalledTimes(1)
+    expect(addToastSpy).toHaveBeenCalledTimes(2)
+    expect(addToastSpy).toHaveBeenNthCalledWith(1, {
+      title: 'Неверный токен',
+      variant: 'danger'
+    })
+    expect(addToastSpy).toHaveBeenNthCalledWith(2, {
+      title: 'Авторизация успешна',
+      variant: 'success'
+    })
     expect(wrapper.find('.password-placeholder').exists()).toBe(false)
     expect(router.currentRoute.value.fullPath).toBe('/timesheet')
   })

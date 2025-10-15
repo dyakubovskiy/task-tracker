@@ -50,7 +50,7 @@ describe('getWorklogs', () => {
       expect(url).toBe('/worklog/_search')
       expect(options?.query).toEqual({ perPage: 100 })
       expect(options?.payload).toEqual({
-        createdBy: 'user-1',
+        createdBy: 1,
         start: period
       })
 
@@ -72,7 +72,8 @@ describe('getWorklogs', () => {
         issue: {
           id: dto.issue.id,
           key: dto.issue.key,
-          display: dto.issue.display
+          display: dto.issue.display,
+          comment: null
         }
       }
     ])

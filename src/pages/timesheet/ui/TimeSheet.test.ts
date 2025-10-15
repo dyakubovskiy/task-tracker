@@ -1,15 +1,24 @@
-import type { Worklog } from '../model'
 import type { CalendarDay, DayWorklogSummary } from './useTimesheet'
+import type { Worklog } from '../model'
 
 import { flushPromises, mount } from '@vue/test-utils'
-import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getWorklogs } from '../api'
 import TimeSheet from './TimeSheet.vue'
 
-const fetchWorklogsMock = vi.fn<(date: Date) => Promise<Worklog[]>>()
+const getAuthUserMock = vi.fn<() => { id: number; name: string; token: string }>()
 
-vi.mock('../model', () => ({
-  useWorklog: () => ({ fetchWorklogs: fetchWorklogsMock })
+vi.mock('@/entities/user', () => ({
+  userModel: () => ({
+    getAuthUser: getAuthUserMock
+  })
 }))
+
+vi.mock('../api', () => ({
+  getWorklogs: vi.fn()
+}))
+
+const getWorklogsMock = vi.mocked(getWorklogs)
 
 const createDeferred = <T>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -23,26 +32,28 @@ const createDeferred = <T>() => {
   return { promise, resolve, reject }
 }
 
-const mountComponent = () => {
-  return mount(TimeSheet, {
+const mountComponent = () =>
+  mount(TimeSheet, {
     attachTo: document.body
   })
-}
 
 describe('TimeSheet', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2024-10-01T00:00:00.000Z'))
-    fetchWorklogsMock.mockReset()
+    document.body.innerHTML = ''
+    getWorklogsMock.mockReset()
+    getAuthUserMock.mockReturnValue({ id: 1, name: 'Test User', token: 'token-1' })
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    document.body.innerHTML = ''
   })
 
   it('показывает скелетон во время загрузки', async () => {
     const deferred = createDeferred<Worklog[]>()
-    fetchWorklogsMock.mockReturnValueOnce(deferred.promise)
+    getWorklogsMock.mockReturnValueOnce(deferred.promise)
 
     const wrapper = mountComponent()
 
@@ -64,24 +75,24 @@ describe('TimeSheet', () => {
   })
 
   it('отображает данные и открывает попап с деталями дня', async () => {
-    fetchWorklogsMock.mockResolvedValueOnce([
+    getWorklogsMock.mockResolvedValueOnce([
       {
         id: 1,
         start: '2024-10-01T09:00:00.000Z',
         duration: 'PT1H30M',
-        issue: { id: '1', key: 'TASK-1', display: 'Task 1' }
+        issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: null }
       },
       {
         id: 2,
         start: '2024-10-01T13:00:00.000Z',
         duration: 'PT45M',
-        issue: { id: '2', key: 'TASK-2', display: 'Task 2' }
+        issue: { id: '2', key: 'TASK-2', display: 'Task 2', comment: null }
       },
       {
         id: 3,
         start: '2024-10-03T09:00:00.000Z',
         duration: 'PT30M',
-        issue: { id: '3', key: 'TASK-3', display: 'Task 3' }
+        issue: { id: '3', key: 'TASK-3', display: 'Task 3', comment: null }
       }
     ])
 
@@ -113,12 +124,12 @@ describe('TimeSheet', () => {
   })
 
   it('закрывает попап по клику на фон', async () => {
-    fetchWorklogsMock.mockResolvedValueOnce([
+    getWorklogsMock.mockResolvedValueOnce([
       {
         id: 1,
         start: '2024-10-05T09:00:00.000Z',
         duration: 'PT1H',
-        issue: { id: '4', key: 'TASK-4', display: 'Task 4' }
+        issue: { id: '4', key: 'TASK-4', display: 'Task 4', comment: null }
       }
     ])
 
@@ -138,37 +149,37 @@ describe('TimeSheet', () => {
   })
 
   it('повторно запрашивает данные при смене месяца', async () => {
-    fetchWorklogsMock.mockResolvedValue([])
+    getWorklogsMock.mockResolvedValue([])
 
     const wrapper = mountComponent()
     await flushPromises()
 
-    expect(fetchWorklogsMock).toHaveBeenCalledTimes(1)
+    expect(getWorklogsMock).toHaveBeenCalledTimes(1)
 
     await wrapper.get('[aria-label="Следующий месяц"]').trigger('click')
     await flushPromises()
 
-    expect(fetchWorklogsMock).toHaveBeenCalledTimes(2)
+    expect(getWorklogsMock).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 
   it('запрашивает данные при переходе на предыдущий месяц', async () => {
-    fetchWorklogsMock.mockResolvedValue([])
+    getWorklogsMock.mockResolvedValue([])
 
     const wrapper = mountComponent()
     await flushPromises()
 
-    expect(fetchWorklogsMock).toHaveBeenCalledTimes(1)
+    expect(getWorklogsMock).toHaveBeenCalledTimes(1)
 
     await wrapper.get('[aria-label="Предыдущий месяц"]').trigger('click')
     await flushPromises()
 
-    expect(fetchWorklogsMock).toHaveBeenCalledTimes(2)
+    expect(getWorklogsMock).toHaveBeenCalledTimes(2)
     wrapper.unmount()
   })
 
   it('показывает пустое состояние для дня без записей', async () => {
-    fetchWorklogsMock.mockResolvedValueOnce([])
+    getWorklogsMock.mockResolvedValueOnce([])
 
     const wrapper = mountComponent()
     await flushPromises()
@@ -189,7 +200,7 @@ describe('TimeSheet', () => {
 
   it('не открывает попап, если календарь ещё загружается', async () => {
     const deferred = createDeferred<Worklog[]>()
-    fetchWorklogsMock.mockReturnValueOnce(deferred.promise)
+    getWorklogsMock.mockReturnValueOnce(deferred.promise)
 
     const wrapper = mountComponent()
     await flushPromises()
@@ -213,13 +224,13 @@ describe('TimeSheet', () => {
   })
 
   it('закрывает попап при смене месяца', async () => {
-    fetchWorklogsMock
+    getWorklogsMock
       .mockResolvedValueOnce([
         {
           id: 1,
           start: '2024-10-01T09:00:00.000Z',
           duration: 'PT1H',
-          issue: { id: '1', key: 'TASK-1', display: 'Task 1' }
+          issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: null }
         }
       ])
       .mockResolvedValueOnce([])
@@ -239,12 +250,12 @@ describe('TimeSheet', () => {
   })
 
   it('поддерживает управление клавиатурой', async () => {
-    fetchWorklogsMock.mockResolvedValue([
+    getWorklogsMock.mockResolvedValue([
       {
         id: 1,
         start: '2024-10-01T10:00:00.000Z',
         duration: 'PT30M',
-        issue: { id: '5', key: 'TASK-5', display: 'Task 5' }
+        issue: { id: '5', key: 'TASK-5', display: 'Task 5', comment: null }
       }
     ])
 
