@@ -75,47 +75,14 @@
         </div>
       </div>
     </div>
-    <teleport to="body">
-      <div
-        v-if="isDetailsOpen"
-        class="detailsOverlay"
-        @click.self="closeDetails">
-        <section
-          class="detailsDialog"
-          role="dialog"
-          aria-modal="true">
-          <header class="detailsHeader">
-            <div class="detailsInfo">
-              <span class="detailsEyebrow">Записи за</span>
-              <h2 class="detailsTitle">{{ selectedDateTitle }}</h2>
-            </div>
-            <VButtonIcon
-              aria-label="Закрыть"
-              :icon="{ iconId: 'x' }"
-              @click="closeDetails" />
-          </header>
-          <div
-            v-if="selectedSummary?.items.length"
-            class="detailsList">
-            <article
-              v-for="item in selectedSummary.items"
-              :key="item.id"
-              class="detailsItem">
-              <div class="detailsIssue">
-                <span class="detailsIssueKey">{{ item.issue.key }}</span>
-                <span class="detailsIssueName">{{ item.issue.display }}</span>
-              </div>
-              <span class="detailsDuration">{{ formatMinutes(item.minutes) }}</span>
-            </article>
-          </div>
-          <p
-            v-else
-            class="detailsEmpty">
-            Нет записей за этот день
-          </p>
-        </section>
-      </div>
-    </teleport>
+    <TimeSheetDetailsModal
+      :visible="isDetailsOpen"
+      :title="selectedDateTitle"
+      :summary="selectedSummary"
+      :groups="selectedGroups"
+      :isLoading
+      @close="closeDetails"
+      @delete="deleteWorkLogHandler" />
   </section>
 </template>
 
@@ -125,10 +92,12 @@ import type { CalendarDay, DayWorklogSummary } from './useTimesheet'
 
 import { ref, computed, watch } from 'vue'
 import { userModel } from '@/entities/user'
+import { useToast } from '@/shared/ui/toast'
 import { VButtonIcon } from '@/shared/ui/button'
 import { formatMinutes, getMonthPeriod } from '../lib'
-import { getWorklogs } from '../api'
+import { getWorklogs, deleteWorkLog } from '../api'
 import { useTimesheetCalendar } from './useTimesheet'
+import TimeSheetDetailsModal from './WorklogModal.vue'
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
@@ -138,8 +107,21 @@ const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
 const isLoading: Ref<boolean> = ref(false)
 const selectedDay: Ref<CalendarDay | null> = ref(null)
 
-const { activeMonth, weeks, monthTitle, changeMonth, getMonthlyTimesheet, getDaySummary } =
-  useTimesheetCalendar()
+const {
+  activeMonth,
+  weeks,
+  monthTitle,
+  changeMonth,
+  getMonthlyTimesheet,
+  getDaySummary,
+  getDayDetails
+} = useTimesheetCalendar()
+
+const createEmptySummary = (dateKey: string): DayWorklogSummary => ({
+  dateKey,
+  totalMinutes: 0,
+  items: []
+})
 
 const selectedSummary: Ref<DayWorklogSummary | null> = computed(() => {
   if (!selectedDay.value) return null
@@ -147,11 +129,12 @@ const selectedSummary: Ref<DayWorklogSummary | null> = computed(() => {
   const summary = getDaySummary(selectedDay.value.dateKey)
   if (summary) return summary
 
-  return {
-    dateKey: selectedDay.value.dateKey,
-    totalMinutes: 0,
-    items: []
-  }
+  return createEmptySummary(selectedDay.value.dateKey)
+})
+
+const selectedGroups = computed(() => {
+  if (!selectedDay.value) return []
+  return getDayDetails(selectedDay.value.dateKey)?.groups ?? []
 })
 
 const selectedDateTitle: Ref<string> = computed(() => {
@@ -169,7 +152,6 @@ const isDetailsOpen: Ref<boolean> = computed(() => selectedDay.value !== null)
 
 const loadMonth = async (userId: number, date: Date): Promise<void> => {
   isLoading.value = true
-  selectedDay.value = null
 
   const worklogs = await getWorklogs({ userId, period: getMonthPeriod(date) })
   getMonthlyTimesheet(date, worklogs)
@@ -193,6 +175,32 @@ const openDay = (day: CalendarDay): void => {
 
 const closeDetails = (): void => {
   selectedDay.value = null
+}
+
+const { addToast } = useToast()
+const deleteWorkLogHandler = async (issueId: string, worklogId: number) => {
+  isLoading.value = true
+
+  const isDeleted = await deleteWorkLog(issueId, worklogId)
+
+  if (isDeleted === false) {
+    isLoading.value = false
+    addToast({
+      variant: 'danger',
+      title: 'Ошибка при удалении записи'
+    })
+    return
+  }
+  await loadMonth(userId.value, activeMonth.value)
+
+  selectedDay.value = selectedDay.value
+
+  isLoading.value = false
+
+  addToast({
+    variant: 'success',
+    title: 'Запись успешно удалена'
+  })
 }
 </script>
 
@@ -322,6 +330,7 @@ const closeDetails = (): void => {
 
 .dayCell.muted {
   opacity: 0.55;
+  pointer-events: none;
 }
 
 .dayCell.active {
@@ -369,94 +378,6 @@ const closeDetails = (): void => {
 .skeletonTotal {
   width: 4.8rem;
   margin-left: auto;
-}
-
-.detailsOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 11, 19, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-24);
-  z-index: 1000;
-}
-
-.detailsDialog {
-  width: min(42rem, 100%);
-  background: var(--color-surface);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-24);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-20);
-}
-
-.detailsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-16);
-}
-
-.detailsInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-.detailsEyebrow {
-  font-size: 1.2rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
-}
-
-.detailsTitle {
-  font-size: 2rem;
-}
-
-.detailsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-12);
-}
-
-.detailsItem {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-12);
-  padding: var(--spacing-12) 0;
-  border-bottom: 0.1rem solid var(--color-border);
-}
-
-.detailsItem:last-of-type {
-  border-bottom: none;
-}
-
-.detailsIssue {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-.detailsIssueKey {
-  font-weight: var(--font-weight-medium);
-}
-
-.detailsIssueName {
-  color: var(--color-text-secondary);
-}
-
-.detailsDuration {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
-
-.detailsEmpty {
-  margin: 0;
-  color: var(--color-text-secondary);
 }
 
 @keyframes pulse {

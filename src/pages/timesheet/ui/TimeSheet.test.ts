@@ -3,10 +3,11 @@ import type { Worklog } from '../model'
 
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getWorklogs } from '../api'
+import { getWorklogs, deleteWorkLog } from '../api'
 import TimeSheet from './TimeSheet.vue'
 
 const getAuthUserMock = vi.fn<() => { id: number; name: string; token: string }>()
+const addToastMock = vi.fn()
 
 vi.mock('@/entities/user', () => ({
   userModel: () => ({
@@ -15,10 +16,16 @@ vi.mock('@/entities/user', () => ({
 }))
 
 vi.mock('../api', () => ({
-  getWorklogs: vi.fn()
+  getWorklogs: vi.fn(),
+  deleteWorkLog: vi.fn()
+}))
+
+vi.mock('@/shared/ui/toast', () => ({
+  useToast: () => ({ addToast: addToastMock })
 }))
 
 const getWorklogsMock = vi.mocked(getWorklogs)
+const deleteWorkLogMock = vi.mocked(deleteWorkLog)
 
 const createDeferred = <T>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -43,6 +50,8 @@ describe('TimeSheet', () => {
     vi.setSystemTime(new Date('2024-10-01T00:00:00.000Z'))
     document.body.innerHTML = ''
     getWorklogsMock.mockReset()
+    deleteWorkLogMock.mockReset()
+    addToastMock.mockReset()
     getAuthUserMock.mockReturnValue({ id: 1, name: 'Test User', token: 'token-1' })
   })
 
@@ -107,14 +116,19 @@ describe('TimeSheet', () => {
 
     const overlay = document.querySelector<HTMLDivElement>('.detailsOverlay')
     expect(overlay).not.toBeNull()
-    const items = Array.from(document.querySelectorAll('.detailsItem'))
+    const issueNames = Array.from(document.querySelectorAll('.issueName')).map((node) =>
+      node.textContent?.trim()
+    )
+    expect(issueNames).toEqual(['Task 1', 'Task 2'])
+
+    const items = Array.from(document.querySelectorAll('.entryItem'))
     expect(items).toHaveLength(2)
-    const durations = Array.from(document.querySelectorAll('.detailsDuration')).map((node) =>
+    const durations = Array.from(document.querySelectorAll('.entryTime')).map((node) =>
       node.textContent?.trim()
     )
     expect(durations).toEqual(['1 ч 30 м', '45 м'])
 
-    const closeButton = document.querySelector<HTMLButtonElement>('[aria-label="Закрыть"]')
+    const closeButton = document.querySelector<HTMLButtonElement>('[aria-label="Закрыть диалог"]')
     expect(closeButton).not.toBeNull()
     closeButton?.click()
     await flushPromises()
@@ -191,7 +205,7 @@ describe('TimeSheet', () => {
     const emptyState = document.querySelector<HTMLParagraphElement>('.detailsEmpty')
     expect(emptyState?.textContent?.trim()).toBe('Нет записей за этот день')
 
-    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть"]')?.click()
+    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть диалог"]')?.click()
     await flushPromises()
 
     expect(document.querySelector<HTMLDivElement>('.detailsOverlay')).toBeNull()
@@ -223,7 +237,7 @@ describe('TimeSheet', () => {
     wrapper.unmount()
   })
 
-  it('закрывает попап при смене месяца', async () => {
+  it('обновляет попап при смене месяца', async () => {
     getWorklogsMock
       .mockResolvedValueOnce([
         {
@@ -245,7 +259,9 @@ describe('TimeSheet', () => {
     await wrapper.get('[aria-label="Следующий месяц"]').trigger('click')
     await flushPromises()
 
-    expect(document.querySelector<HTMLDivElement>('.detailsOverlay')).toBeNull()
+    const overlay = document.querySelector<HTMLDivElement>('.detailsOverlay')
+    expect(overlay).not.toBeNull()
+    expect(overlay?.textContent).toContain('Нет записей за этот день')
     wrapper.unmount()
   })
 
@@ -268,7 +284,7 @@ describe('TimeSheet', () => {
     await flushPromises()
     expect(document.querySelector<HTMLDivElement>('.detailsOverlay')).not.toBeNull()
 
-    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть"]')?.click()
+    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть диалог"]')?.click()
     await flushPromises()
     expect(document.querySelector<HTMLDivElement>('.detailsOverlay')).toBeNull()
 
@@ -276,8 +292,57 @@ describe('TimeSheet', () => {
     await flushPromises()
     expect(document.querySelector<HTMLDivElement>('.detailsOverlay')).not.toBeNull()
 
-    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть"]')?.click()
+    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть диалог"]')?.click()
     await flushPromises()
+    wrapper.unmount()
+  })
+
+  it('вызывает удаление ворклога при событии delete', async () => {
+    getWorklogsMock.mockResolvedValue([
+      {
+        id: 1,
+        start: '2024-10-01T09:00:00.000Z',
+        duration: 'PT1H',
+        issue: { id: 'ISSUE-1', key: 'TASK-1', display: 'Task 1', comment: null }
+      }
+    ])
+    deleteWorkLogMock.mockResolvedValue(true)
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    await wrapper.get('[data-date-key="2024-10-01"]').trigger('click')
+    await flushPromises()
+
+    const deleteButton = document.querySelector<HTMLButtonElement>('[aria-label="Удалить запись"]')
+    expect(deleteButton).not.toBeNull()
+    deleteButton?.click()
+    await flushPromises()
+
+    expect(deleteWorkLogMock).toHaveBeenCalledWith('ISSUE-1', 1)
+
+    wrapper.unmount()
+  })
+
+  it('показывает тост и не обновляет данные при неудачном удалении', async () => {
+    getWorklogsMock.mockResolvedValue([])
+    deleteWorkLogMock.mockResolvedValue(false)
+
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    await (
+      wrapper.vm as unknown as {
+        deleteWorkLogHandler(issueId: string, worklogId: number): Promise<void>
+      }
+    ).deleteWorkLogHandler('ISSUE-1', 10)
+
+    expect(deleteWorkLogMock).toHaveBeenCalledWith('ISSUE-1', 10)
+    expect(addToastMock).toHaveBeenCalledWith({
+      variant: 'danger',
+      title: 'Ошибка при удалении записи'
+    })
+
     wrapper.unmount()
   })
 })

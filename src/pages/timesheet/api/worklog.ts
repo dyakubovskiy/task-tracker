@@ -58,6 +58,9 @@ export const getWorklogs = async ({
     adapter: worklogMapDTO
   })
 
+export const deleteWorkLog = async (issueId: string, worklogId: number): Promise<boolean> =>
+  http.requestSuccess('delete', `/issues/${issueId}/worklog/${worklogId}`)
+
 const worklogMapDTO = (dto: WorklogDTO): Worklog => ({
   id: dto.id,
   start: dto.start,
@@ -66,6 +69,6 @@ const worklogMapDTO = (dto: WorklogDTO): Worklog => ({
     id: dto.issue.id,
     key: dto.issue.key,
     display: dto.issue.display,
-    comment: dto.comment ?? null
+    comment: dto.comment ? dto.comment : null
   }
 })

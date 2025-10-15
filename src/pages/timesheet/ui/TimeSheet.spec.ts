@@ -21,7 +21,8 @@ vi.mock('../api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api')>()
   return {
     ...actual,
-    getWorklogs: vi.fn(actual.getWorklogs)
+    getWorklogs: vi.fn(actual.getWorklogs),
+    deleteWorkLog: vi.fn()
   }
 })
 
@@ -163,10 +164,19 @@ describe('TimeSheet integration', () => {
 
     const overlay = document.querySelector<HTMLDivElement>('.detailsOverlay')
     expect(overlay).not.toBeNull()
-    expect(overlay?.textContent).toContain('TASK-1')
-    expect(overlay?.textContent).toContain('TASK-2')
 
-    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть"]')?.click()
+    const issueNames = Array.from(document.querySelectorAll('.issueName')).map((node) =>
+      node.textContent?.trim()
+    )
+    expect(issueNames).toEqual(['Task 1', 'Task 2'])
+
+    const issueLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('.issueKey')).map(
+      (node) => node.getAttribute('href')
+    )
+    expect(issueLinks).toContain('https://tracker.yandex.ru/TASK-1')
+    expect(issueLinks).toContain('https://tracker.yandex.ru/TASK-2')
+
+    document.querySelector<HTMLButtonElement>('[aria-label="Закрыть диалог"]')?.click()
     await flushComponent(wrapper)
     wrapper.unmount()
   })

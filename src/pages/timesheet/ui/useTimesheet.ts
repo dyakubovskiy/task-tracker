@@ -18,18 +18,68 @@ export interface DayWorklogSummary {
   items: Array<NormalizedWorklog>
 }
 
-interface NormalizedWorklog {
+export interface NormalizedWorklog {
   id: number
   dateKey: string
   minutes: number
   issue: WorklogIssue
 }
 
-interface WorklogIssue {
+export interface WorklogIssue {
   id: string
   key: string
   display: string
   comment: string | null
+}
+
+export interface GroupedWorklogEntry {
+  id: number
+  dateKey: string
+  minutes: number
+  comment: string | null
+}
+
+export interface GroupedWorklogIssue {
+  issue: WorklogIssue
+  entries: Array<GroupedWorklogEntry>
+  totalMinutes: number
+}
+
+export interface DayWorklogDetails {
+  dateKey: string
+  totalMinutes: number
+  groups: Array<GroupedWorklogIssue>
+}
+
+export const groupWorklogsByIssue = (
+  items: Array<NormalizedWorklog>
+): Array<GroupedWorklogIssue> => {
+  const grouped = new Map<string, GroupedWorklogIssue>()
+
+  for (const worklog of items) {
+    const key = worklog.issue.key
+    const existing = grouped.get(key)
+
+    const entry: GroupedWorklogEntry = {
+      id: worklog.id,
+      dateKey: worklog.dateKey,
+      minutes: worklog.minutes,
+      comment: worklog.issue.comment
+    }
+
+    if (existing) {
+      existing.entries.push(entry)
+      existing.totalMinutes += worklog.minutes
+    } else {
+      grouped.set(key, {
+        issue: worklog.issue,
+        entries: [entry],
+        totalMinutes: worklog.minutes
+      })
+    }
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => b.totalMinutes - a.totalMinutes)
 }
 
 interface TimesheetCalendar {
@@ -40,6 +90,7 @@ interface TimesheetCalendar {
   changeMonth: (offset: number) => void
   getMonthlyTimesheet: (date: Date, worklogs: Array<Worklog>) => void
   getDaySummary: (dateKey: string) => DayWorklogSummary | undefined
+  getDayDetails: (dateKey: string) => DayWorklogDetails | undefined
 }
 
 const CALENDAR_WEEKS = 6
@@ -100,6 +151,17 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
     }
 
     return summaries
+  }
+
+  const getDayDetails: TimesheetCalendar['getDayDetails'] = (dateKey) => {
+    const summary = daySummaries.value.get(dateKey)
+    if (!summary) return undefined
+
+    return {
+      dateKey: summary.dateKey,
+      totalMinutes: summary.totalMinutes,
+      groups: groupWorklogsByIssue(summary.items)
+    }
   }
 
   const getMonthBoundaries = (targetDate: Date): { firstDay: Date; lastDay: Date } => {
@@ -166,6 +228,7 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
     daySummaries: computed(() => daySummaries.value),
     changeMonth,
     getMonthlyTimesheet,
-    getDaySummary
+    getDaySummary,
+    getDayDetails
   }
 }

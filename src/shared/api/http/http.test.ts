@@ -166,6 +166,14 @@ describe('useHttpClient.fetchData', () => {
     expect(result).toBeNull()
   })
 
+  it('возвращает null при статусе 2xx и пустой строке ответа', async () => {
+    fetchMock.mockResolvedValueOnce(mockTextResponse(200, ''))
+
+    const result = await http.fetchData('get', '/empty-text')
+
+    expect(result).toBeNull()
+  })
+
   it('возвращает null при неуспешном статусе 4xx', async () => {
     const errorBody = { message: 'Not found' }
     fetchMock.mockResolvedValueOnce(mockResponse(404, errorBody))
@@ -341,5 +349,40 @@ describe('useHttpClient.fetchList', () => {
       headers: defaultHeaders,
       body: undefined
     })
+  })
+})
+
+describe('useHttpClient.requestSuccess', () => {
+  let http: HttpInstance
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock)
+    fetchMock.mockReset()
+    http = createClient('https://api.test')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('возвращает true для успешных статусов', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(204, null))
+
+    const result = await http.requestSuccess('delete', '/worklog/1')
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.test/worklog/1', {
+      method: 'DELETE',
+      headers: defaultHeaders,
+      body: undefined
+    })
+    expect(result).toBe(true)
+  })
+
+  it('возвращает false для неуспешных статусов', async () => {
+    fetchMock.mockResolvedValueOnce(mockResponse(500, null))
+
+    const result = await http.requestSuccess('delete', '/worklog/1')
+
+    expect(result).toBe(false)
   })
 })

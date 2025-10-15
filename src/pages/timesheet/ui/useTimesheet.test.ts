@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 
 import { getTodayKey, getMonthStartUTC, toDateKey, parseDurationToMinutes } from '../lib'
-import { useTimesheetCalendar } from './useTimesheet'
+import { useTimesheetCalendar, groupWorklogsByIssue } from './useTimesheet'
 
 vi.mock('../lib', () => ({
   toDateKey: vi.fn(),
@@ -20,7 +20,7 @@ const createWorklog = (overrides = {}) => {
     id: 1,
     start: '2024-10-01T09:00:00.000Z',
     duration: 'PT1H',
-    issue: { id: '1', key: 'TASK-1', display: 'Task' },
+    issue: { id: '1', key: 'TASK-1', display: 'Task', comment: null },
     ...overrides
   }
 }
@@ -91,6 +91,78 @@ describe('useTimesheetCalendar', () => {
     expect(getDaySummary('2024-10-01')?.totalMinutes).toBe(210)
     expect(dayMap['2024-10-01']?.totalMinutes).toBe(210)
     expect(dayMap['2024-10-03']?.totalMinutes).toBe(30)
+  })
+
+  it('возвращает детальную информацию по дню с группировкой по задачам', () => {
+    const { getMonthlyTimesheet, getDayDetails } = useTimesheetCalendar()
+
+    const worklogs = [
+      createWorklog({
+        id: 1,
+        start: '2024-10-02T09:00:00.000Z',
+        duration: 'PT2H',
+        issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: 'Morning work' }
+      }),
+      createWorklog({
+        id: 2,
+        start: '2024-10-02T11:00:00.000Z',
+        duration: 'PT30M',
+        issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: null }
+      }),
+      createWorklog({
+        id: 3,
+        start: '2024-10-02T14:00:00.000Z',
+        duration: 'PT1H',
+        issue: { id: '2', key: 'TASK-2', display: 'Task 2', comment: 'Afternoon' }
+      })
+    ]
+
+    mockParseDuration
+      .mockImplementationOnce(() => 120)
+      .mockImplementationOnce(() => 30)
+      .mockImplementationOnce(() => 60)
+
+    getMonthlyTimesheet(new Date('2024-10-01T00:00:00.000Z'), worklogs)
+
+    const details = getDayDetails('2024-10-02')
+    expect(details).toBeDefined()
+    if (!details) {
+      throw new Error('Expected details to be defined')
+    }
+
+    expect(details.groups).toHaveLength(2)
+    const firstGroup = details.groups[0]!
+    const secondGroup = details.groups[1]!
+
+    expect(firstGroup.issue.key).toBe('TASK-1')
+    expect(firstGroup.totalMinutes).toBe(150)
+    expect(secondGroup.totalMinutes).toBe(60)
+  })
+
+  it('группирует ворклоги по задачам и сортирует по убыванию длительности', () => {
+    const grouped = groupWorklogsByIssue([
+      {
+        id: 1,
+        dateKey: '2024-10-03',
+        minutes: 45,
+        issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: 'first' }
+      },
+      {
+        id: 2,
+        dateKey: '2024-10-03',
+        minutes: 120,
+        issue: { id: '2', key: 'TASK-2', display: 'Task 2', comment: null }
+      }
+    ])
+
+    expect(grouped).toHaveLength(2)
+
+    const first = grouped[0]!
+    const second = grouped[1]!
+
+    expect(first.issue.key).toBe('TASK-2')
+    expect(first.entries).toHaveLength(1)
+    expect(second.entries[0]!.comment).toBe('first')
   })
 
   it('помечает текущий день и дни текущего месяца', () => {
