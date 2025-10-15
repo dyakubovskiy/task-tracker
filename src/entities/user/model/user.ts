@@ -9,12 +9,13 @@ import { useUserEvents } from './events'
 interface User {
   id: number
   name: string
+  token: string
 }
 
 interface UserModel {
   isUserAuthorized: Ref<boolean>
   getAuthUser: () => User
-  setUser: (data: User & { token: string }) => void
+  setUser: (data: User) => void
   onAuthorize: (payload: EventBusListener<{ token: string }>) => void
 }
 
@@ -29,10 +30,10 @@ const useUserModel = (): UserModel => {
     return user.value
   }
 
-  const setUser: UserModel['setUser'] = ({ token, ...data }) => {
+  const setUser: UserModel['setUser'] = (data) => {
     user.value = data
 
-    authorize.emit({ token })
+    authorize.emit({ token: data.token })
   }
 
   return {
