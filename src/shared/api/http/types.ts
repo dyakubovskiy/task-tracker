@@ -56,6 +56,7 @@ export interface HttpClient {
     options: RequestOptions<DTO, Data> & { adapter: (dto: DTO) => Data }
   ): Promise<Array<Data>>
 
+  requestSuccess: (method: HttpMethod, url: string, options?: RequestOptions) => Promise<boolean>
   setToken: (token: string) => void
   resetToken: () => void
 }

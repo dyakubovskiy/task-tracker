@@ -5,11 +5,11 @@ import { safeDestr } from 'destr'
 const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
   let authToken: string | null = null
 
-  const setToken = (token: string): void => {
+  const setToken: HttpClient['setToken'] = (token) => {
     authToken = token
   }
 
-  const resetToken = (): void => {
+  const resetToken: HttpClient['resetToken'] = () => {
     authToken = null
   }
 
@@ -39,6 +39,12 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
     return options?.adapter ? data.map(options.adapter) : (data as unknown as Array<Data>)
   }
 
+  const requestSuccess: HttpClient['requestSuccess'] = async (method, url, options) => {
+    const { status } = await request(method, url, options || {})
+
+    return isStatusSuccess(status)
+  }
+
   const request = async <T>(
     method: HttpMethod,
     url: string,
@@ -55,7 +61,7 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
 
       const status = response.status
       const text = await response.text()
-      const data = safeDestr<T>(text, { strict: true })
+      const data = text ? safeDestr<T>(text, { strict: true }) : null
 
       return { data, status }
     } catch {
@@ -89,7 +95,7 @@ const useHttpClient = ({ baseURL, defaultHeaders }: HttpConfig): HttpClient => {
 
   const isStatusSuccess = (status: number): boolean => status >= 200 && status < 300
 
-  return { fetchData, fetchList, setToken, resetToken }
+  return { fetchData, fetchList, requestSuccess, setToken, resetToken }
 }
 
 export { useHttpClient }
