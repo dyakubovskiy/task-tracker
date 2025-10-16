@@ -8,6 +8,8 @@ import {
   minutesToDuration
 } from './workdate'
 
+import { getPrimaryQueue, extractQueueFromKey } from './queue'
+
 export {
   getMonthPeriod,
   toDateKey,
@@ -15,5 +17,7 @@ export {
   getTodayKey,
   getMonthStartUTC,
   formatMinutes,
-  minutesToDuration
+  minutesToDuration,
+  getPrimaryQueue,
+  extractQueueFromKey
 }

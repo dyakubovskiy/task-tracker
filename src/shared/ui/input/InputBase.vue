@@ -150,4 +150,20 @@ const inputValue: Ref<string | null> = computed({
   font-size: 1.4rem;
   color: var(--color-text-muted);
 }
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type='number']::-ms-clear,
+input[type='number']::-ms-expand {
+  display: none;
+}
 </style>

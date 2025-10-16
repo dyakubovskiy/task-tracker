@@ -82,6 +82,7 @@
       :groups="selectedGroups"
       :isLoading
       @close="closeDetails"
+      @add="handleAdd"
       @edit="handleEdit"
       @delete="deleteWorkLogHandler" />
     <EditWorklogModal
@@ -93,6 +94,12 @@
       :current-comment="editingWorklog.comment"
       @close="closeEditModal"
       @save="handleEditSave" />
+    <CreateWorklogModal
+      ref="createModalRef"
+      :visible="isCreateModalOpen"
+      :date-key="selectedDay?.dateKey ?? ''"
+      @close="closeCreateModal"
+      @save="handleCreateSave" />
   </section>
 </template>
 
@@ -104,11 +111,12 @@ import { ref, computed, watch } from 'vue'
 import { userModel } from '@/entities/user'
 import { useToast } from '@/shared/ui/toast'
 import { VButtonIcon } from '@/shared/ui/button'
-import { formatMinutes, getMonthPeriod } from '../lib'
-import { getWorklogs, deleteWorkLog, updateWorklog } from '../api'
+import { formatMinutes, getMonthPeriod, getPrimaryQueue } from '../lib'
+import { getWorklogs, deleteWorkLog, updateWorklog, createWorklog } from '../api'
 import { useTimesheetCalendar } from './useTimesheet'
 import TimeSheetDetailsModal from './WorklogModal.vue'
 import EditWorklogModal from './EditWorklogModal.vue'
+import CreateWorklogModal from './CreateWorklogModal.vue'
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
@@ -118,6 +126,9 @@ const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
 const isLoading: Ref<boolean> = ref(false)
 const selectedDay: Ref<CalendarDay | null> = ref(null)
 const isEditModalOpen: Ref<boolean> = ref(false)
+const isCreateModalOpen: Ref<boolean> = ref(false)
+const primaryQueue: Ref<string | null> = ref(null)
+const createModalRef: Ref<InstanceType<typeof CreateWorklogModal> | null> = ref(null)
 const editingWorklog: Ref<{
   worklogId: number
   issueId: string
@@ -181,6 +192,8 @@ const loadMonth = async (userId: number, date: Date): Promise<void> => {
   const worklogs = await getWorklogs({ userId, period: getMonthPeriod(date) })
   getMonthlyTimesheet(date, worklogs)
 
+  primaryQueue.value = getPrimaryQueue(worklogs)
+
   isLoading.value = false
 }
 
@@ -202,6 +215,17 @@ const closeDetails = (): void => {
   selectedDay.value = null
 }
 
+const handleAdd = (): void => {
+  isCreateModalOpen.value = true
+  if (createModalRef.value) {
+    if (primaryQueue.value) {
+      createModalRef.value.setPrimaryQueue(primaryQueue.value)
+    }
+    const user = getAuthUser()
+    createModalRef.value.setUsername(String(user.id))
+  }
+}
+
 const handleEdit = (payload: {
   worklogId: number
   issueId: string
@@ -215,6 +239,10 @@ const handleEdit = (payload: {
 
 const closeEditModal = (): void => {
   isEditModalOpen.value = false
+}
+
+const closeCreateModal = (): void => {
+  isCreateModalOpen.value = false
 }
 
 const handleEditSave = async (payload: {
@@ -250,6 +278,42 @@ const handleEditSave = async (payload: {
   addToast({
     variant: 'success',
     title: 'Запись успешно обновлена'
+  })
+}
+
+const handleCreateSave = async (payload: {
+  issueKey: string
+  start: string
+  duration: string
+  comment: string
+}): Promise<void> => {
+  isLoading.value = true
+  isCreateModalOpen.value = false
+
+  const createdWorklog = await createWorklog({
+    issueKey: payload.issueKey,
+    start: payload.start,
+    duration: payload.duration,
+    comment: payload.comment || undefined
+  })
+
+  if (createdWorklog === null) {
+    isLoading.value = false
+    addToast({
+      variant: 'danger',
+      title: 'Ошибка при добавлении записи'
+    })
+    return
+  }
+
+  await loadMonth(userId.value, activeMonth.value)
+  selectedDay.value = selectedDay.value
+
+  isLoading.value = false
+
+  addToast({
+    variant: 'success',
+    title: 'Запись успешно добавлена'
   })
 }
 

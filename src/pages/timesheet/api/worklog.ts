@@ -82,6 +82,79 @@ export const updateWorklog = async ({
     adapter: worklogMapDTO
   })
 
+interface CreateWorklogParams {
+  issueKey: string
+  start: string
+  duration: string
+  comment?: string
+}
+
+export const createWorklog = async ({
+  issueKey,
+  start,
+  duration,
+  comment
+}: CreateWorklogParams): Promise<Worklog | null> =>
+  http.fetchData<WorklogDTO, Worklog>('post', `/issues/${issueKey}/worklog`, {
+    payload: {
+      start,
+      duration,
+      ...(comment && { comment })
+    },
+    adapter: worklogMapDTO
+  })
+
+export interface IssueSuggest {
+  key: string
+  id: string
+  summary: string
+}
+
+interface IssueSuggestDTO {
+  self: string
+  id: string
+  key: string
+  version?: number
+  summary?: string
+  display?: string
+}
+
+interface SearchIssuesParams {
+  input: string
+  queue?: string
+  username?: string
+}
+
+const buildSearchQuery = ({ input, queue, username }: SearchIssuesParams): string => {
+  const textQuery = input.trim()
+
+  return `("Queue": ${queue} OR "Related": ${username}) AND ("Key": ${textQuery} OR "Summary": ${textQuery})`
+}
+
+export const searchIssues = async (params: SearchIssuesParams): Promise<Array<IssueSuggest>> => {
+  const query = buildSearchQuery(params)
+
+  console.log('Search query:', query)
+  console.log('Search params:', params)
+
+  try {
+    return await http.fetchList<IssueSuggestDTO, IssueSuggest>('post', '/issues/_search', {
+      query: { perPage: 20 },
+      payload: { query },
+      adapter: issueSuggestMapDTO
+    })
+  } catch (error) {
+    console.error('Search issues error:', error)
+    return []
+  }
+}
+
+const issueSuggestMapDTO = (dto: IssueSuggestDTO): IssueSuggest => ({
+  id: dto.id,
+  key: dto.key,
+  summary: dto.summary || dto.display || dto.key
+})
+
 const worklogMapDTO = (dto: WorklogDTO): Worklog => ({
   id: dto.id,
   start: dto.start,

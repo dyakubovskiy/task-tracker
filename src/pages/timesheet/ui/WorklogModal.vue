@@ -120,6 +120,15 @@
               class="detailsEmpty">
               Нет записей за этот день
             </p>
+            <footer
+              v-if="!isLoading"
+              class="detailsFooter">
+              <VButton
+                variant="primary"
+                @click="$emit('add')">
+                Добавить время
+              </VButton>
+            </footer>
           </section>
         </transition>
       </div>
@@ -129,7 +138,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { VButtonIcon } from '@/shared/ui/button'
+import { VButton, VButtonIcon } from '@/shared/ui/button'
 import { formatMinutes } from '../lib'
 import type { DayWorklogSummary, GroupedWorklogIssue } from './useTimesheet'
 
@@ -145,6 +154,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'add'): void
   (e: 'delete', issueId: string, worklogId: number): void
   (
     e: 'edit',
@@ -224,42 +234,25 @@ const handleEdit = (
 .detailsDialog {
   background: white;
   border-radius: 12px;
-  padding: 24px;
   max-width: 700px;
   width: 100%;
   max-height: 75dvh;
-  overflow-y: auto;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-
-  /* Firefox scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* Chrome, Safari, Edge scrollbar */
-.detailsDialog::-webkit-scrollbar {
-  width: 8px;
+/* Footer */
+.detailsFooter {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  background: white;
 }
 
-.detailsDialog::-webkit-scrollbar-track {
-  background: #f3f4f6;
-  border-radius: 4px;
-  margin: 4px 0;
-}
-
-.detailsDialog::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-  border: 2px solid #f3f4f6;
-  transition: background-color 0.2s ease;
-}
-
-.detailsDialog::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-.detailsDialog::-webkit-scrollbar-thumb:active {
-  background: #6b7280;
+.detailsFooter button {
+  width: 100%;
 }
 
 /* Header */
@@ -267,10 +260,10 @@ const handleEdit = (
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 32px;
-  padding-bottom: 20px;
+  padding: 24px 24px 20px;
   border-bottom: 1px solid #e5e7eb;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .detailsInfo {
@@ -300,20 +293,57 @@ const handleEdit = (
   display: flex;
   flex-direction: column;
   gap: 24px;
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+
+  /* Firefox scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+}
+
+/* Chrome, Safari, Edge scrollbar */
+.detailsList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.detailsList::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+.detailsList::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+  border: 2px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+.detailsList::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.detailsList::-webkit-scrollbar-thumb:active {
+  background: #6b7280;
 }
 
 .detailsEmpty {
   text-align: center;
   color: #9ca3af;
-  padding: 48px 16px;
+  padding: 48px 24px;
   font-size: 16px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Issue Group */
 .detailsIssueGroup {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  overflow: hidden;
   background: #f9fafb;
   transition: box-shadow 0.2s ease;
 }
@@ -330,6 +360,7 @@ const handleEdit = (
   border-bottom: 1px solid #e5e7eb;
   background: white;
   gap: 12px;
+  border-radius: 8px 8px 0 0;
 }
 
 .issueInfo {
@@ -385,6 +416,8 @@ const handleEdit = (
   display: flex;
   flex-direction: column;
   padding: 0;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
 }
 
 .entryItem {
