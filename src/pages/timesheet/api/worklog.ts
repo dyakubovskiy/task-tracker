@@ -61,6 +61,27 @@ export const getWorklogs = async ({
 export const deleteWorkLog = async (issueId: string, worklogId: number): Promise<boolean> =>
   http.requestSuccess('delete', `/issues/${issueId}/worklog/${worklogId}`)
 
+interface UpdateWorklogParams {
+  issueId: string
+  worklogId: number
+  duration: string
+  comment?: string
+}
+
+export const updateWorklog = async ({
+  issueId,
+  worklogId,
+  duration,
+  comment
+}: UpdateWorklogParams): Promise<Worklog | null> =>
+  http.fetchData<WorklogDTO, Worklog>('patch', `/issues/${issueId}/worklog/${worklogId}`, {
+    payload: {
+      duration,
+      ...(comment !== undefined && { comment })
+    },
+    adapter: worklogMapDTO
+  })
+
 const worklogMapDTO = (dto: WorklogDTO): Worklog => ({
   id: dto.id,
   start: dto.start,

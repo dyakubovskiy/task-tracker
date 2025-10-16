@@ -82,7 +82,17 @@
       :groups="selectedGroups"
       :isLoading
       @close="closeDetails"
+      @edit="handleEdit"
       @delete="deleteWorkLogHandler" />
+    <EditWorklogModal
+      :visible="isEditModalOpen"
+      :worklog-id="editingWorklog.worklogId"
+      :issue-id="editingWorklog.issueId"
+      :issue-key="editingWorklog.issueKey"
+      :current-duration="editingWorklog.duration"
+      :current-comment="editingWorklog.comment"
+      @close="closeEditModal"
+      @save="handleEditSave" />
   </section>
 </template>
 
@@ -95,9 +105,10 @@ import { userModel } from '@/entities/user'
 import { useToast } from '@/shared/ui/toast'
 import { VButtonIcon } from '@/shared/ui/button'
 import { formatMinutes, getMonthPeriod } from '../lib'
-import { getWorklogs, deleteWorkLog } from '../api'
+import { getWorklogs, deleteWorkLog, updateWorklog } from '../api'
 import { useTimesheetCalendar } from './useTimesheet'
 import TimeSheetDetailsModal from './WorklogModal.vue'
+import EditWorklogModal from './EditWorklogModal.vue'
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
@@ -106,6 +117,20 @@ const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
 
 const isLoading: Ref<boolean> = ref(false)
 const selectedDay: Ref<CalendarDay | null> = ref(null)
+const isEditModalOpen: Ref<boolean> = ref(false)
+const editingWorklog: Ref<{
+  worklogId: number
+  issueId: string
+  issueKey: string
+  duration: string
+  comment: string | null
+}> = ref({
+  worklogId: 0,
+  issueId: '',
+  issueKey: '',
+  duration: '',
+  comment: null
+})
 
 const {
   activeMonth,
@@ -175,6 +200,57 @@ const openDay = (day: CalendarDay): void => {
 
 const closeDetails = (): void => {
   selectedDay.value = null
+}
+
+const handleEdit = (payload: {
+  worklogId: number
+  issueId: string
+  issueKey: string
+  duration: string
+  comment: string | null
+}): void => {
+  editingWorklog.value = payload
+  isEditModalOpen.value = true
+}
+
+const closeEditModal = (): void => {
+  isEditModalOpen.value = false
+}
+
+const handleEditSave = async (payload: {
+  worklogId: number
+  issueId: string
+  duration: string
+  comment: string
+}): Promise<void> => {
+  isLoading.value = true
+  isEditModalOpen.value = false
+
+  const updatedWorklog = await updateWorklog({
+    issueId: payload.issueId,
+    worklogId: payload.worklogId,
+    duration: payload.duration,
+    comment: payload.comment || undefined
+  })
+
+  if (updatedWorklog === null) {
+    isLoading.value = false
+    addToast({
+      variant: 'danger',
+      title: 'Ошибка при редактировании записи'
+    })
+    return
+  }
+
+  await loadMonth(userId.value, activeMonth.value)
+  selectedDay.value = selectedDay.value
+
+  isLoading.value = false
+
+  addToast({
+    variant: 'success',
+    title: 'Запись успешно обновлена'
+  })
 }
 
 const { addToast } = useToast()

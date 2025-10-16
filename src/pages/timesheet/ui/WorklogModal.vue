@@ -91,11 +91,20 @@
                       <span class="entryTime">{{ formatMinutes(entry.minutes) }}</span>
                     </div>
                     <div class="entryActions">
-                      <!-- <VButtonIcon
+                      <VButtonIcon
                         aria-label="Редактировать запись"
                         :icon="{ iconId: 'edit' }"
                         class="actionBtn actionBtn--edit"
-                        @click="emitEdit(entry, grouped.issue)" /> -->
+                        @click="
+                          handleEdit(
+                            entry.id,
+                            entry.minutes,
+                            entry.comment,
+                            grouped.issue.id,
+                            grouped.issue.key,
+                            entry.duration
+                          )
+                        " />
                       <VButtonIcon
                         aria-label="Удалить запись"
                         :icon="{ iconId: 'trash' }"
@@ -137,12 +146,39 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'delete', issueId: string, worklogId: number): void
+  (
+    e: 'edit',
+    payload: {
+      worklogId: number
+      issueId: string
+      issueKey: string
+      duration: string
+      comment: string | null
+    }
+  ): void
 }>()
 
 const hasEntries = computed(() => props.groups.length > 0)
 
 const handleClose = () => {
   emit('close')
+}
+
+const handleEdit = (
+  worklogId: number,
+  minutes: number,
+  comment: string | null,
+  issueId: string,
+  issueKey: string,
+  duration: string
+) => {
+  emit('edit', {
+    worklogId,
+    issueId,
+    issueKey,
+    duration,
+    comment
+  })
 }
 </script>
 

@@ -145,12 +145,14 @@ describe('useTimesheetCalendar', () => {
         id: 1,
         dateKey: '2024-10-03',
         minutes: 45,
+        duration: 'PT45M',
         issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: 'first' }
       },
       {
         id: 2,
         dateKey: '2024-10-03',
         minutes: 120,
+        duration: 'PT2H',
         issue: { id: '2', key: 'TASK-2', display: 'Task 2', comment: null }
       }
     ])

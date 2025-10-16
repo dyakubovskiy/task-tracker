@@ -4,7 +4,8 @@ import {
   parseDurationToMinutes,
   getTodayKey,
   getMonthStartUTC,
-  formatMinutes
+  formatMinutes,
+  minutesToDuration
 } from './workdate'
 
 export {
@@ -13,5 +14,6 @@ export {
   parseDurationToMinutes,
   getTodayKey,
   getMonthStartUTC,
-  formatMinutes
+  formatMinutes,
+  minutesToDuration
 }

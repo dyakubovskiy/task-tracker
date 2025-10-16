@@ -22,6 +22,7 @@ export interface NormalizedWorklog {
   id: number
   dateKey: string
   minutes: number
+  duration: string
   issue: WorklogIssue
 }
 
@@ -36,6 +37,7 @@ export interface GroupedWorklogEntry {
   id: number
   dateKey: string
   minutes: number
+  duration: string
   comment: string | null
 }
 
@@ -64,6 +66,7 @@ export const groupWorklogsByIssue = (
       id: worklog.id,
       dateKey: worklog.dateKey,
       minutes: worklog.minutes,
+      duration: worklog.duration,
       comment: worklog.issue.comment
     }
 
@@ -128,6 +131,7 @@ export const useTimesheetCalendar = (): TimesheetCalendar => {
     id: entry.id,
     dateKey: toDateKey(entry.start),
     minutes: parseDurationToMinutes(entry.duration),
+    duration: entry.duration,
     issue: entry.issue
   })
 

@@ -1,3 +1,3 @@
-import { getWorklogs, deleteWorkLog } from './worklog'
+import { getWorklogs, deleteWorkLog, updateWorklog } from './worklog'
 
-export { getWorklogs, deleteWorkLog }
+export { getWorklogs, deleteWorkLog, updateWorklog }

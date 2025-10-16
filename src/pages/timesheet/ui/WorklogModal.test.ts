@@ -21,6 +21,7 @@ describe('WorklogModal', () => {
               id: 1,
               dateKey: '2024-10-01',
               minutes: 60,
+              duration: 'PT1H',
               issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: 'Комментарий' }
             }
           ]
@@ -29,8 +30,8 @@ describe('WorklogModal', () => {
           {
             issue: { id: '1', key: 'TASK-1', display: 'Task 1', comment: 'Комментарий' },
             entries: [
-              { id: 1, dateKey: '2024-10-01', minutes: 60, comment: 'Комментарий' },
-              { id: 2, dateKey: '2024-10-01', minutes: 45, comment: null }
+              { id: 1, dateKey: '2024-10-01', minutes: 60, duration: 'PT1H', comment: 'Комментарий' },
+              { id: 2, dateKey: '2024-10-01', minutes: 45, duration: 'PT45M', comment: null }
             ],
             totalMinutes: 105
           }

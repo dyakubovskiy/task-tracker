@@ -60,3 +60,22 @@ export const getTodayKey = (): string => toDateKey(new Date())
 export const getMonthStartUTC = (date: Date): Date => {
   return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0))
 }
+
+export const minutesToDuration = (minutes: number): string => {
+  if (minutes <= 0) return 'PT0M'
+
+  const days = Math.floor(minutes / (WORK_HOURS_PER_DAY * MINUTES_IN_HOUR))
+  const remainingMinutes = minutes % (WORK_HOURS_PER_DAY * MINUTES_IN_HOUR)
+  const hours = Math.floor(remainingMinutes / MINUTES_IN_HOUR)
+  const mins = remainingMinutes % MINUTES_IN_HOUR
+
+  let duration = 'P'
+  if (days > 0) duration += `${days}D`
+  if (hours > 0 || mins > 0) {
+    duration += 'T'
+    if (hours > 0) duration += `${hours}H`
+    if (mins > 0) duration += `${mins}M`
+  }
+
+  return duration
+}
