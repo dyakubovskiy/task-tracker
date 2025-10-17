@@ -127,15 +127,14 @@ interface SearchIssuesParams {
 
 const buildSearchQuery = ({ input, queue, username }: SearchIssuesParams): string => {
   const textQuery = input.trim()
+  const left = queue ? `("Queue": ${queue} OR "Related": ${username})` : `"Related": ${username}`
+  const operator = queue ? 'AND' : 'OR'
 
-  return `("Queue": ${queue} OR "Related": ${username}) AND ("Key": ${textQuery} OR "Summary": ${textQuery})`
+  return `${left} ${operator} ("Key": ${textQuery} OR "Summary": ${textQuery})`
 }
 
 export const searchIssues = async (params: SearchIssuesParams): Promise<Array<IssueSuggest>> => {
   const query = buildSearchQuery(params)
-
-  console.log('Search query:', query)
-  console.log('Search params:', params)
 
   try {
     return await http.fetchList<IssueSuggestDTO, IssueSuggest>('post', '/issues/_search', {

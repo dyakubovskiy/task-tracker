@@ -188,7 +188,7 @@ const isDetailsOpen: Ref<boolean> = computed(() => selectedDay.value !== null)
 
 const loadMonth = async (userId: number, date: Date): Promise<void> => {
   isLoading.value = true
-
+  await new Promise((resolve) => setTimeout(resolve, 500))
   const worklogs = await getWorklogs({ userId, period: getMonthPeriod(date) })
   getMonthlyTimesheet(date, worklogs)
 
