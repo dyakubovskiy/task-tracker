@@ -98,7 +98,6 @@ const toggleSidebar = () => {
             v-if="isSidebarOpen"
             class="user-card__info">
             <div class="user-card__name">{{ user?.name || 'Пользователь' }}</div>
-            <div class="user-card__email">{{ user?.email || '' }}</div>
           </div>
         </div>
       </div>
