@@ -98,6 +98,8 @@
       ref="createModalRef"
       :visible="isCreateModalOpen"
       :date-key="selectedDay?.dateKey ?? ''"
+      :favoriteIssues
+      :recentIssues
       @close="closeCreateModal"
       @save="handleCreateSave" />
   </section>
@@ -105,6 +107,7 @@
 
 <script setup lang="ts">
 import type { Ref } from 'vue'
+import type { Worklog } from '../model'
 import type { CalendarDay, DayWorklogSummary } from './useTimesheet'
 
 import { ref, computed, watch } from 'vue'
@@ -117,6 +120,7 @@ import { useTimesheetCalendar } from './useTimesheet'
 import TimeSheetDetailsModal from './WorklogModal.vue'
 import EditWorklogModal from './EditWorklogModal.vue'
 import CreateWorklogModal from './CreateWorklogModal.vue'
+import { useFavoriteIssues } from './favoriteIssue'
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const skeletonGrid = Array.from({ length: 6 }, (_, weekIndex) =>
@@ -193,9 +197,50 @@ const loadMonth = async (userId: number, date: Date): Promise<void> => {
   getMonthlyTimesheet(date, worklogs)
 
   primaryQueue.value = getPrimaryQueue(worklogs)
+  recentIssues.value = getRecentIssues(worklogs)
 
   isLoading.value = false
 }
+interface RecentIssue {
+  id: string
+  key: string
+  summary: string
+}
+
+const recentIssues: Ref<Array<RecentIssue>> = ref([])
+
+const getRecentIssues = (worklogs: Array<Worklog>): Array<RecentIssue> => {
+  // Группируем worklogs по issue.id и находим последнюю дату использования
+  const issueMap = new Map<string, { issue: RecentIssue; lastUsed: Date }>()
+
+  for (const worklog of worklogs) {
+    const issueId = worklog.issue.id
+    const currentDate = new Date(worklog.start)
+
+    if (!issueMap.has(issueId)) {
+      issueMap.set(issueId, {
+        issue: {
+          id: worklog.issue.id,
+          key: worklog.issue.key,
+          summary: worklog.issue.display
+        },
+        lastUsed: currentDate
+      })
+    } else {
+      const existing = issueMap.get(issueId)!
+      if (currentDate > existing.lastUsed) {
+        existing.lastUsed = currentDate
+      }
+    }
+  }
+
+  // Преобразуем в массив и сортируем по дате (самые свежие первыми)
+  return Array.from(issueMap.values())
+    .sort((a, b) => b.lastUsed.getTime() - a.lastUsed.getTime())
+    .map((item) => item.issue)
+}
+
+const { favoriteIssues } = useFavoriteIssues()
 
 const { getAuthUser } = userModel()
 const userId: Ref<number> = computed(() => getAuthUser().id)

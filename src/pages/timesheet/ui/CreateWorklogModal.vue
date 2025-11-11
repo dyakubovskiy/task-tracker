@@ -40,34 +40,110 @@
                   :error="errors.issue"
                   autocomplete="off"
                   @update:model-value="(newQuery) => (searchQuery = newQuery ?? '')"
-                  @focus="isFocused = true"
-                  @blur="isFocused = false" />
+                  @focus="handleInputFocus"
+                  @blur="handleInputBlur" />
+
                 <div
-                  v-if="(showDropdown || isFocused) && searchQuery.length >= 2"
-                  class="dropdown">
-                  <div
-                    v-if="isSearching"
-                    class="dropdownItem loading">
-                    Поиск задач...
-                  </div>
-                  <template v-else>
+                  v-if="showDropdown"
+                  class="dropdown"
+                  @mouseenter="isMouseInsideDropdown = true"
+                  @mouseleave="isMouseInsideDropdown = false"
+                  @mousedown.prevent>
+                  <!-- Tabs -->
+                  <div class="tabs">
                     <button
-                      v-for="suggestion in suggestions"
-                      :key="suggestion.id"
+                      v-for="tab in tabs"
+                      :key="tab.id"
                       type="button"
-                      class="dropdownItem"
-                      @click="selectIssue(suggestion)">
-                      <span class="issueKey">{{ suggestion.key }}</span>
-                      <span class="issueSummary">{{ suggestion.summary }}</span>
+                      class="tab"
+                      :class="{ active: activeTab === tab.id }"
+                      @click="activeTab = tab.id">
+                      {{ tab.label }}
+                      <span
+                        v-if="tab.count !== undefined"
+                        class="tabBadge">
+                        {{ tab.count }}
+                      </span>
                     </button>
+                  </div>
+
+                  <!-- Tab Content -->
+                  <div class="tabContent">
+                    <!-- Search Tab -->
                     <div
-                      v-if="showNoResults"
-                      class="dropdownItem empty">
-                      Ничего не найдено
+                      v-if="activeTab === 'search'"
+                      class="tabPanel">
+                      <div
+                        v-if="searchQuery.length < 2"
+                        class="dropdownItem empty">
+                        Введите минимум 2 символа
+                      </div>
+                      <div
+                        v-else-if="isSearching"
+                        class="dropdownItem loading">
+                        Поиск задач...
+                      </div>
+                      <template v-else>
+                        <button
+                          v-for="suggestion in suggestions"
+                          :key="suggestion.id"
+                          type="button"
+                          class="dropdownItem"
+                          @click="selectIssue(suggestion)">
+                          <span class="issueKey">{{ suggestion.key }}</span>
+                          <span class="issueSummary">{{ suggestion.summary }}</span>
+                        </button>
+                        <div
+                          v-if="suggestions.length === 0 && searchQuery.length >= 2"
+                          class="dropdownItem empty">
+                          Ничего не найдено
+                        </div>
+                      </template>
                     </div>
-                  </template>
+
+                    <!-- Favorites Tab -->
+                    <div
+                      v-if="activeTab === 'favorites'"
+                      class="tabPanel">
+                      <button
+                        v-for="issue in favoriteIssues"
+                        :key="issue.id"
+                        type="button"
+                        class="dropdownItem"
+                        @click="selectIssue(issue)">
+                        <span class="issueKey">{{ issue.key }}</span>
+                        <span class="issueSummary">{{ issue.summary }}</span>
+                      </button>
+                      <div
+                        v-if="favoriteIssues.length === 0"
+                        class="dropdownItem empty">
+                        Нет избранных задач
+                      </div>
+                    </div>
+
+                    <!-- Recent Tab -->
+                    <div
+                      v-if="activeTab === 'recent'"
+                      class="tabPanel">
+                      <button
+                        v-for="issue in recentIssues"
+                        :key="issue.id"
+                        type="button"
+                        class="dropdownItem"
+                        @click="selectIssue(issue)">
+                        <span class="issueKey">{{ issue.key }}</span>
+                        <span class="issueSummary">{{ issue.summary }}</span>
+                      </button>
+                      <div
+                        v-if="recentIssues.length === 0"
+                        class="dropdownItem empty">
+                        Нет недавних задач за этот месяц
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
               <div class="timeFields">
                 <InputBase
                   v-model="formData.hours"
@@ -86,12 +162,14 @@
                   :disabled="isLoading"
                   :error="errors.minutes" />
               </div>
+
               <InputBase
                 v-model="formData.comment"
                 label="Комментарий (опционально)"
                 type="text"
                 placeholder="Описание работы"
                 :disabled="isLoading" />
+
               <div class="actions">
                 <VButton
                   variant="ghost"
@@ -124,12 +202,23 @@ import { InputBase } from '@/shared/ui/input'
 import { minutesToDuration } from '../lib'
 import { useIssueSearch } from './useIssueSearch'
 
+interface Issue {
+  id: string
+  key: string
+  summary: string
+}
+
 interface Props {
   visible: boolean
   dateKey: string
+  favoriteIssues?: Issue[]
+  recentIssues?: Issue[]
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  favoriteIssues: () => [],
+  recentIssues: () => []
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -152,6 +241,9 @@ const selectedIssueKey: Ref<string> = ref('')
 const errors: Ref<{ issue?: string; hours?: string; minutes?: string }> = ref({})
 const isLoading: Ref<boolean> = ref(false)
 const isIssueSelected: Ref<boolean> = ref(false)
+const isFocused = ref(false)
+const activeTab = ref<'search' | 'favorites' | 'recent'>('search')
+const isMouseInsideDropdown = ref(false)
 
 const {
   searchQuery,
@@ -168,6 +260,12 @@ defineExpose({
   setUsername
 })
 
+const tabs = computed(() => [
+  { id: 'search' as const, label: 'Поиск' },
+  { id: 'favorites' as const, label: 'Избранное', count: props.favoriteIssues.length },
+  { id: 'recent' as const, label: 'Недавние', count: props.recentIssues.length }
+])
+
 const formattedDate = computed(() => {
   const date = new Date(props.dateKey)
   const formatted = date
@@ -176,27 +274,56 @@ const formattedDate = computed(() => {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1)
 })
 
-const isFocused = ref(false)
-
 const showDropdown = computed(() => {
   if (isIssueSelected.value) return false
-  if (searchQuery.value.length < 2) return false
-  return isSearching.value || suggestions.value.length > 0
+  if (!isFocused.value) return false
+
+  // Show dropdown if there's content to show in any tab
+  if (activeTab.value === 'search') {
+    return searchQuery.value.length >= 0 // Always show search tab when focused
+  }
+  if (activeTab.value === 'favorites') {
+    return props.favoriteIssues.length > 0 || isFocused.value
+  }
+  if (activeTab.value === 'recent') {
+    return props.recentIssues.length > 0 || isFocused.value
+  }
+
+  return false
 })
 
-const showNoResults = computed(() => {
-  return (
-    !isIssueSelected.value &&
-    !isSearching.value &&
-    suggestions.value.length === 0 &&
-    searchQuery.value.length >= 2
-  )
-})
+const handleInputFocus = () => {
+  isFocused.value = true
+  // Auto-switch to appropriate tab based on content
+  if (searchQuery.value.length < 2) {
+    if (props.favoriteIssues.length > 0) {
+      activeTab.value = 'favorites'
+    } else if (props.recentIssues.length > 0) {
+      activeTab.value = 'recent'
+    } else {
+      activeTab.value = 'search'
+    }
+  }
+}
+
+const handleInputBlur = () => {
+  // Delay to allow click on dropdown items
+  setTimeout(() => {
+    if (!isMouseInsideDropdown.value) {
+      isFocused.value = false
+    }
+  }, 150)
+}
 
 watch(searchQuery, (newValue) => {
   if (isIssueSelected.value && newValue !== selectedIssueKey.value) {
     isIssueSelected.value = false
     selectedIssueKey.value = ''
+  }
+
+  // Auto-switch to search tab when user types
+  if (newValue.length >= 2 && activeTab.value !== 'search') {
+    activeTab.value = 'search'
   }
 })
 
@@ -209,15 +336,24 @@ watch(
       isIssueSelected.value = false
       clearSearch()
       errors.value = {}
+      // Reset to default tab
+      if (props.favoriteIssues.length > 0) {
+        activeTab.value = 'favorites'
+      } else {
+        activeTab.value = 'search'
+      }
     }
   }
 )
 
-const selectIssue = (issue: { key: string; id: string; summary: string }): void => {
+const selectIssue = (issue: Issue): void => {
   selectedIssueKey.value = issue.key
   isIssueSelected.value = true
+  searchQuery.value = issue.key
   selectIssueSuggestion(issue)
   errors.value.issue = undefined
+  isFocused.value = false
+  isMouseInsideDropdown.value = false
 }
 
 const isFormValid = computed(() => {
@@ -283,9 +419,209 @@ const handleClose = () => {
 </script>
 
 <style scoped>
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-backdrop);
+  backdrop-filter: blur(0.4rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-16);
+}
+
+.dialog {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: min(52rem, 100%);
+  max-height: calc(100dvh - 3.2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-16);
+  padding: var(--spacing-24);
+  border-bottom: 0.1rem solid var(--color-border);
+}
+
+.info {
+  flex: 1;
+}
+
+.eyebrow {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spacing-4);
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.form {
+  padding: var(--spacing-24);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-20);
+  overflow-y: auto;
+}
+
+.searchField {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  background-color: var(--color-surface);
+  border: 0.1rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  max-height: 32rem;
+  overflow: hidden;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  padding: var(--spacing-8) var(--spacing-8) 0;
+  border-bottom: 0.1rem solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.tab {
+  flex: 1;
+  padding: var(--spacing-8) var(--spacing-12);
+  font-size: 1.4rem;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 0.2rem solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-8);
+  position: relative;
+  margin-bottom: -0.1rem;
+}
+
+.tab:hover {
+  color: var(--color-text-secondary);
+  background-color: var(--color-surface-variant);
+}
+
+.tab.active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+.tabBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 var(--spacing-4);
+  font-size: 1.2rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  background-color: var(--color-surface-variant);
+  border-radius: var(--radius-sm);
+}
+
+.tab.active .tabBadge {
+  color: var(--color-accent);
+  background-color: var(--color-toast-info-bg);
+}
+
+.tabContent {
+  overflow-y: auto;
+  max-height: 28rem;
+}
+
+.tabPanel {
+  padding: var(--spacing-4);
+}
+
+.dropdownItem {
+  width: 100%;
+  padding: var(--spacing-12) var(--spacing-16);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.dropdownItem:not(.empty):not(.loading):hover {
+  background-color: var(--color-surface-variant);
+}
+
+.dropdownItem.empty,
+.dropdownItem.loading {
+  color: var(--color-text-muted);
+  font-size: 1.4rem;
+  text-align: center;
+  cursor: default;
+  padding: var(--spacing-20);
+}
+
+.issueKey {
+  font-size: 1.3rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+}
+
+.issueSummary {
+  font-size: 1.4rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-16);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-12);
+  justify-content: flex-end;
+  padding-top: var(--spacing-8);
+}
+
 .dialog-fade-enter-active,
 .dialog-fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--transition-emphasized);
 }
 
 .dialog-fade-enter-from,
@@ -295,166 +631,37 @@ const handleClose = () => {
 
 .dialog-slide-enter-active,
 .dialog-slide-leave-active {
-  transition: transform 0.3s ease;
+  transition: all var(--transition-emphasized);
 }
 
-.dialog-slide-enter-from,
+.dialog-slide-enter-from {
+  opacity: 0;
+  transform: scale(0.95) translateY(-2rem);
+}
+
 .dialog-slide-leave-to {
-  transform: translateY(-20px);
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1002;
-  padding: 16px;
-}
-
-.dialog {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  max-width: 500px;
-  width: 100%;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e5e7eb;
-  gap: 16px;
-}
-
-.info {
-  flex: 1;
-  min-width: 0;
-}
-
-.eyebrow {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-}
-
-.title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0;
-  word-break: break-word;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.searchField {
-  position: relative;
-}
-
-.dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  max-height: 240px;
-  overflow-y: auto;
-  z-index: 10;
-  margin-top: 4px;
-}
-
-.dropdownItem {
-  width: 100%;
-  padding: 12px 16px;
-  border: none;
-  background: white;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.dropdownItem:last-child {
-  border-bottom: none;
-}
-
-.dropdownItem:hover:not(.loading):not(.empty) {
-  background-color: #f9fafb;
-}
-
-.dropdownItem.loading,
-.dropdownItem.empty {
-  color: #6b7280;
-  cursor: default;
-  font-size: 14px;
-  justify-content: center;
-  align-items: center;
-}
-
-.issueKey {
-  font-size: 13px;
-  font-weight: 600;
-  color: #2563eb;
-}
-
-.issueSummary {
-  font-size: 14px;
-  color: #4b5563;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.timeFields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 8px;
+  opacity: 0;
+  transform: scale(0.95) translateY(2rem);
 }
 
 @media (max-width: 640px) {
-  .overlay {
-    align-items: flex-end;
-  }
-
   .dialog {
-    max-width: 100%;
-    border-radius: 12px 12px 0 0;
-  }
-
-  .actions {
-    flex-direction: column-reverse;
-  }
-
-  .actions button {
     width: 100%;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .timeFields {
+    grid-template-columns: 1fr;
+  }
+
+  .tabs {
+    padding: var(--spacing-4);
+  }
+
+  .tab {
+    font-size: 1.3rem;
+    padding: var(--spacing-8);
   }
 }
 </style>

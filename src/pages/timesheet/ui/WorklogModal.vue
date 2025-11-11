@@ -78,6 +78,17 @@
                   <div class="issueTotalTime">
                     {{ formatMinutes(grouped.totalMinutes) }}
                   </div>
+                  <VButtonIcon
+                    :icon="{ iconId: 'star' }"
+                    class="favoriteButton"
+                    :class="{ active: isFavorite(grouped.issue.id) }"
+                    @click="
+                      handleToggleFavorite({
+                        id: grouped.issue.id,
+                        key: grouped.issue.key,
+                        summary: grouped.issue.display
+                      })
+                    " />
                 </header>
                 <div class="entriesList">
                   <div
@@ -141,6 +152,8 @@ import { computed } from 'vue'
 import { VButton, VButtonIcon } from '@/shared/ui/button'
 import { formatMinutes } from '../lib'
 import type { DayWorklogSummary, GroupedWorklogIssue } from './useTimesheet'
+import type { FavoriteIssue } from './favoriteIssue'
+import { useFavoriteIssues } from './favoriteIssue'
 
 interface Props {
   visible: boolean
@@ -189,6 +202,12 @@ const handleEdit = (
     duration,
     comment
   })
+}
+
+const { isFavorite, toggleFavorite } = useFavoriteIssues()
+
+const handleToggleFavorite = (item: FavoriteIssue) => {
+  toggleFavorite(item)
 }
 </script>
 
@@ -585,5 +604,40 @@ const handleEdit = (
   .entryTime {
     align-self: flex-end;
   }
+}
+
+.favoriteButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base),
+    transform var(--transition-base);
+  line-height: 1;
+}
+
+.favoriteButton:hover {
+  background-color: var(--color-surface-variant);
+  color: #f59e0b;
+}
+
+.favoriteButton:focus-visible {
+  outline: 0.2rem solid var(--color-accent);
+  outline-offset: 0.2rem;
+}
+
+.favoriteButton.active {
+  color: #f59e0b;
+}
+
+.favoriteButton:active {
+  transform: scale(0.92);
 }
 </style>

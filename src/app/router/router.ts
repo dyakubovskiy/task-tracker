@@ -3,7 +3,7 @@ import { LOGIN_ROUTE, LOGIN_LINK } from '@/pages/login'
 import { TIME_SHEET_ROUTE, TIME_SHEET_LINK } from '@/pages/timesheet'
 import { userModel } from '@/entities/user'
 import { MAIN_LINK } from '@/shared/config'
-import { CenteredLayout } from '../layout'
+import { CenteredLayout, SidebarLayout } from '../layout'
 
 const { isUserAuthorized } = userModel()
 
@@ -13,7 +13,9 @@ const router = createRouter({
     {
       path: '/',
       name: MAIN_LINK.name,
-      redirect: TIME_SHEET_LINK
+      redirect: TIME_SHEET_LINK,
+      component: SidebarLayout,
+      children: [TIME_SHEET_ROUTE]
     },
     {
       path: LOGIN_ROUTE.path,
@@ -26,7 +28,7 @@ const router = createRouter({
         }
       ]
     },
-    TIME_SHEET_ROUTE,
+    // TIME_SHEET_ROUTE,
     {
       path: '/:pathMatch(.*)*',
       redirect: TIME_SHEET_LINK
